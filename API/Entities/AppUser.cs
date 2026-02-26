@@ -7,8 +7,8 @@ public class AppUser
     public required string Email { get; set; }
     public string? ImageUrl { get; set; }
     public DateOnly DateOfBirth { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime LastActive { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset LastActive { get; set; } = DateTime.UtcNow;
     public string? Description { get; set; }
     public ICollection<Auction> Auctions { get; set; } = new List<Auction>();
     public ICollection<Bid> Bids { get; set; } = new List<Bid>();
