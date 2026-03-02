@@ -15,26 +15,17 @@ public class AuctionsController(AppDbContext context) : BaseApiController
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions()
     {
-        return await context.Auctions
-            .Select(auction => new AuctionResponseDto
-            {
-                AuctionId = auction.AuctionId,
-                ItemName = auction.ItemName,
-                StartingPrice = auction.StartingPrice,
-                BuyNowPrice = auction.BuyNowPrice,
-                SellerId = auction.SellerId,
-                SellerName = auction.Seller.DisplayName,
-                StartTime = auction.StartTime,
-                EndTime = auction.EndTime
-            }).ToListAsync();
+        return await context.Auctions.ProjectToDto().ToListAsync();
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Auction>> GetAuction(int id)
+    public async Task<ActionResult<AuctionResponseDto>> GetAuction(int id)
     {
-        var auction = await context.Auctions.FindAsync(id);
-        if (auction == null) return NotFound();
-        return auction;
+        var auction = await context.Auctions
+            .ProjectToDto()
+            .FirstOrDefaultAsync(a => a.AuctionId == id);
+        
+        return auction == null ? NotFound() : auction;
     }
 
     [Authorize]
@@ -45,6 +36,7 @@ public class AuctionsController(AppDbContext context) : BaseApiController
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
         
         var currTime = DateTimeOffset.UtcNow;
+        
         var auction = new Auction()
         {
             ItemName = auctionRequestDto.ItemName,
@@ -57,6 +49,12 @@ public class AuctionsController(AppDbContext context) : BaseApiController
         
         context.Auctions.Add(auction);
         await context.SaveChangesAsync();
-        return auction.ToDto();
+
+        var responseDto = await context.Auctions
+            .ProjectToDto()
+            .FirstOrDefaultAsync(a => a.AuctionId == auction.AuctionId);
+
+        if (responseDto == null) return NotFound();
+        return responseDto;
     }
 }

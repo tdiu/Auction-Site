@@ -1,3 +1,4 @@
+using API.Controllers;
 using API.DTOs;
 using API.Entities;
 
@@ -5,14 +6,19 @@ namespace API.Extensions;
 
 public static class AuctionExtensions
 {
-    public static AuctionResponseDto ToDto(this Auction auction)
+    public static IQueryable<AuctionResponseDto> ProjectToDto(this IQueryable<Auction> query)
     {
-        return new AuctionResponseDto()
+        return query.Select(a => new AuctionResponseDto
         {
-            ItemName = auction.ItemName,
-            StartingPrice = auction.StartingPrice,
-            BuyNowPrice = auction.BuyNowPrice,
-            SellerId =  auction.SellerId
-        };
+            AuctionId = a.AuctionId,
+            ItemName = a.ItemName,
+            StartingPrice = a.StartingPrice,
+            BuyNowPrice = a.BuyNowPrice,
+            SellerId = a.SellerId,
+            SellerName = a.Seller.DisplayName,
+            StartTime = a.StartTime,
+            EndTime = a.EndTime,
+        });
+
     }
 }
