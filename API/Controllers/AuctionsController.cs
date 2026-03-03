@@ -13,9 +13,14 @@ namespace API.Controllers;
 public class AuctionsController(AppDbContext context) : BaseApiController
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions()
+    public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions([FromQuery] string? userId)
     {
-        return await context.Auctions.ProjectToDto().ToListAsync();
+        var query = context.Auctions.AsQueryable();
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = query.Where(a => a.SellerId == userId);
+        }
+        return await query.ProjectToDto().ToListAsync();
     }
 
     [HttpGet("{id}")]

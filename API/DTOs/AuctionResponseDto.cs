@@ -11,6 +11,7 @@ public class AuctionResponseDto
     public decimal? BuyNowPrice { get; set; }
     [Required]
     public string SellerId { get; set; } = "";
+    [Required]
     public string SellerName { get; set; } = "";
     public DateTimeOffset StartTime { get; set; }
     public DateTimeOffset EndTime { get; set; }
