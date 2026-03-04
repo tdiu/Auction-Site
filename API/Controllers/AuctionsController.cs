@@ -3,21 +3,22 @@ using API.Data;
 using API.DTOs;
 using API.Entities;
 using API.Extensions;
+using API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
 
-public class AuctionsController(AppDbContext context) : BaseApiController
+public class AuctionsController(AppDbContext context, IAuctionRepository auctionRepository) : BaseApiController
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions([FromQuery] string? userId)
+    public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions([FromQuery] string? displayName)
     {
-        var query = context.Auctions.AsQueryable();
-        if (!string.IsNullOrEmpty(userId))
+        var query = auctionRepository.GetAuctionsQueryable();
+        if (!string.IsNullOrEmpty(displayName))
         {
-            query = query.Where(a => a.SellerId == userId);
+            query = query.Where(a => a.Seller.DisplayName == displayName);
         }
         return await query.ProjectToDto().ToListAsync();
     }
@@ -25,9 +26,7 @@ public class AuctionsController(AppDbContext context) : BaseApiController
     [HttpGet("{id}")]
     public async Task<ActionResult<AuctionResponseDto>> GetAuction(int id)
     {
-        var auction = await context.Auctions
-            .ProjectToDto()
-            .FirstOrDefaultAsync(a => a.AuctionId == id);
+        var auction = await auctionRepository.GetAuctionAsync(id);
         
         return auction == null ? NotFound() : auction;
     }
@@ -51,12 +50,8 @@ public class AuctionsController(AppDbContext context) : BaseApiController
             EndTime = currTime.AddDays(7)
         };
         
-        context.Auctions.Add(auction);
-        await context.SaveChangesAsync();
-
-        var responseDto = await context.Auctions
-            .ProjectToDto()
-            .FirstOrDefaultAsync(a => a.AuctionId == auction.AuctionId);
+        await auctionRepository.CreateAuctionAsync(auction);
+        var responseDto = await auctionRepository.GetAuctionAsync(auction.AuctionId);
 
         if (responseDto == null) return NotFound();
         return responseDto;
