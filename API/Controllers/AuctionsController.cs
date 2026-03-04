@@ -1,4 +1,3 @@
-using System.Data;
 using System.Security.Claims;
 using API.Data;
 using API.DTOs;

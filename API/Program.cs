@@ -18,6 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 builder.Services.AddCors();
 builder.Services.AddScoped<iTokenService, TokenService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
