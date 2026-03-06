@@ -1,4 +1,6 @@
+using API.DTOs;
 using API.Entities;
+using API.Extensions;
 using API.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,14 +24,16 @@ public class UserRepository(AppDbContext context) : IUserRepository
         return await context.SaveChangesAsync() > 0;
     }
 
-    public async Task<IReadOnlyList<AppUser>> GetUsersAsync()
+    public async Task<IReadOnlyList<MemberDto>> GetUsersAsync()
     {
-        return await context.Users.ToListAsync();
+        var users = await context.Users.ToListAsync();
+        return users.Select(x => x.ToMemberDto()).ToList();
     }
 
-    public async Task<AppUser?> GetUserByIdAsync(string id)
+    public async Task<MemberDto?> GetUserByIdAsync(string id)
     {
-        return await context.Users.FindAsync(id);
+        var user = await context.Users.FindAsync(id);
+        return user?.ToMemberDto();
     }
 
     public async Task<AppUser?> GetUserByEmailAsync(string email)
