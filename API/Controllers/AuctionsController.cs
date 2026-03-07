@@ -13,13 +13,22 @@ namespace API.Controllers;
 public class AuctionsController(AppDbContext context, IAuctionRepository auctionRepository) : BaseApiController
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions([FromQuery] string? displayName)
+    public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions(
+        [FromQuery] string? displayName, 
+        [FromQuery] string? searchTerm)
     {
         var query = auctionRepository.GetAuctionsQueryable();
+
         if (!string.IsNullOrEmpty(displayName))
         {
             query = query.Where(a => a.Seller.DisplayName == displayName);
         }
+
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(a => a.ItemName.ToLower().Contains(searchTerm.ToLower()));
+        }
+
         return await query.ProjectToDto().ToListAsync();
     }
 

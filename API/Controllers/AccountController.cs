@@ -14,6 +14,8 @@ public class AccountController(IUserRepository userRepository, iTokenService tok
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
         if (await userRepository.EmailExists(registerDto.Email)) return BadRequest("Email already exists");
+        if (await userRepository.DisplayNameExists(registerDto.DisplayName)) return BadRequest("Display name already exists");
+        
         using var hmac = new HMACSHA3_512();
 
         var user = new AppUser
