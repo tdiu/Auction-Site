@@ -9,7 +9,7 @@ public interface IUserRepository
     void Update(AppUser user);
     Task<bool> SaveAllAsync();
     Task<IReadOnlyList<MemberDto>> GetUsersAsync();
-    Task<MemberDto?> GetUserByIdAsync(string id);
+    Task<MemberDto?> GetUserByDisplayNameAsync(string id);
     Task<bool> EmailExists(string email);
     Task<bool> DisplayNameExists(string displayName);
     Task<AppUser?> GetUserByEmailAsync(string email);

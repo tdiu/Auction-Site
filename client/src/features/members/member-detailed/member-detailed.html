@@ -1,1 +1,107 @@
-<p>member-detailed works!</p>
+@if (member$ | async; as member) {
+<div class="max-w-[1400px] mx-auto p-6 text-gray-200">
+  <div class="flex gap-8">
+
+    <!-- LEFT COLUMN: Profile & Description (Fixed Width) -->
+    <div class="w-[350px] flex flex-col gap-4 flex-shrink-0">
+
+      <!-- Profile Card -->
+      <div class="bg-[#242424] rounded-xl p-6 flex flex-col items-center shadow-lg border border-gray-800">
+        <div class="relative">
+          <div class="w-28 h-28 rounded-full border-4 border-[#333] overflow-hidden">
+            <img [src]="member.imageUrl || '/user.png'" alt="profile" class="w-full h-full object-cover">
+          </div>
+          <div class="absolute bottom-1 right-2 w-4 h-4 bg-green-500 border-2 border-[#242424] rounded-full"></div>
+        </div>
+
+        <h2 class="text-xl font-bold mt-4">{{member.displayName}}</h2>
+
+        <div class="flex w-full gap-2 mb-8 mt-6">
+          <button class="btn btn-sm bg-[#ff4742] hover:bg-[#e63e39] border-none text-white flex-1 normal-case">
+            Follow
+          </button>
+          <button class="btn btn-sm bg-[#2ecc71] hover:bg-[#27ae60] border-none text-white flex-1 normal-case">
+            Chat
+          </button>
+        </div>
+
+        <div class="w-full space-y-3 text-[13px]">
+          <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+            <span class="text-gray-400">Member since</span>
+            <span class="font-semibold text-white">{{member.createdAt | date: 'MMMM, yyyy'}}</span>
+          </div>
+
+          <div class="flex justify-between items-start border-b border-gray-800 pb-2">
+            <span class="text-gray-400">Successful delivery</span>
+            <div class="text-right">
+              <div class="flex items-center justify-end gap-1 text-blue-400 font-bold">
+                <span>🏅</span> 99.39%
+              </div>
+              <div class="text-[10px] text-gray-500">(Total lifetime orders: 5.5k)</div>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center border-b border-gray-800 pb-2 text-[12px]">
+            <span class="text-gray-400">Last 90 Days</span>
+            <div class="flex gap-2">
+              <span class="text-green-500">👍 99.64%</span>
+              <span class="text-red-500">👎 0.36%</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center text-[12px]">
+            <span class="text-gray-400">All time rating</span>
+            <div class="flex gap-2">
+              <span class="text-green-500">👍 99.89%</span>
+              <span class="text-red-500">👎 0.11%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex w-full mt-6 pt-4 border-t border-gray-800 text-center">
+          <div class="flex-1 border-r border-gray-800">
+            <div class="text-lg font-bold text-white">150</div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-tighter">Followers</div>
+          </div>
+          <div class="flex-1">
+            <div class="text-lg font-bold text-white">8</div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-tighter">Following</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description Card -->
+      <div class="bg-[#242424] rounded-xl p-6 shadow-lg border border-gray-800">
+        <h3 class="text-lg font-bold mb-4 text-white border-b border-gray-800 pb-2">Description</h3>
+        <div class="text-sm text-gray-400 leading-relaxed space-y-4">
+          <p>Lorem Ipsum</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Auctions -->
+    <div class="flex-grow flex flex-col gap-8">
+
+      <!-- Auctions Section -->
+      <section>
+        <h2 class="text-2xl font-bold mb-6 text-white">Auctions</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Placeholder Cards -->
+          @for (i of [1,2,3,4]; track i) {
+            <div class="bg-[#242424] p-5 rounded-xl border border-gray-800 hover:border-gray-600 transition-all cursor-pointer">
+              <div class="text-sm font-medium mb-2 line-clamp-2">Lorem Ipsum</div>
+              <div class="flex items-center gap-2 text-xs mb-4">
+                <span class="text-green-500 font-bold">👍 100%</span>
+                <span class="text-gray-500">(130 Sold)</span>
+              </div>
+              <div class="text-right text-xl font-bold text-white">
+                100 <span class="text-xs text-gray-400">CAD</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+}

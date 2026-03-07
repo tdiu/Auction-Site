@@ -30,9 +30,9 @@ public class UserRepository(AppDbContext context) : IUserRepository
         return users.Select(x => x.ToMemberDto()).ToList();
     }
 
-    public async Task<MemberDto?> GetUserByIdAsync(string id)
+    public async Task<MemberDto?> GetUserByDisplayNameAsync(string displayName)
     {
-        var user = await context.Users.FindAsync(id);
+        var user = await context.Users.FirstOrDefaultAsync(x => x.DisplayName.ToLower() == displayName.ToLower());
         return user?.ToMemberDto();
     }
 

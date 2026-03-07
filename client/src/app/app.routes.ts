@@ -20,7 +20,7 @@ export const routes: Routes = [
     ]
   },
   {path: 'members', component: MemberList},
-  {path: 'members/:id', component: MemberDetailed},
+  {path: 'members/:displayName', component: MemberDetailed},
   {path: 'server-error', component: ServerError},
   {path: '**', component: NotFound},
 ];

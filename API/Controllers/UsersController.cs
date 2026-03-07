@@ -13,10 +13,10 @@ public class UsersController(IUserRepository userRepository) : BaseApiController
     }
 
     [Authorize]
-    [HttpGet("{id}")]
-    public async Task<ActionResult<MemberDto>> GetUser(string id)
+    [HttpGet("{displayName}")]
+    public async Task<ActionResult<MemberDto>> GetUser(string displayName)
     {
-        var user = await userRepository.GetUserByIdAsync(id);
+        var user = await userRepository.GetUserByDisplayNameAsync(displayName);
         
         if (user == null) return NotFound();
         return user;
