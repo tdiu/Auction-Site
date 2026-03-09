@@ -9,3 +9,9 @@ export type Auction = {
   startTime: string,
   endTime: string,
 }
+
+export type AuctionRequest = {
+  auctionId: string,
+  startingPrice: number,
+  buyNowPrice?: number | null;
+}

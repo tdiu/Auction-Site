@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
-import {Auction} from '../../types/auction';
+import {Auction, AuctionRequest} from '../../types/auction';
 
 @Injectable({
   providedIn: 'root',
@@ -22,7 +22,7 @@ export class AuctionService {
     return this.http.get<Auction>(`${this.baseUrl}/auctions/${auctionId}`);
   }
 
-  createAuction(auctionData: {itemName: string, startingPrice: number, buyNowPrice?: number | null}) {
+  createAuction(auctionData: AuctionRequest) {
     return this.http.post<Auction>(`${this.baseUrl}/auctions`, auctionData);
   }
 }

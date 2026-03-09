@@ -2,6 +2,7 @@ import {Component, inject} from '@angular/core';
 import {AuctionService} from '../../core/services/auction-service';
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators} from '@angular/forms';
 import {Router} from '@angular/router';
+import {AuctionRequest} from '../../types/auction';
 
 const buyNowPriceValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const startingPrice = control.get('startingPrice');
@@ -31,7 +32,8 @@ export class Sell {
 
   onSubmit() {
     if (this.sellForm.valid) {
-      this.auctionService.createAuction(this.sellForm.value).subscribe({
+      const auctionData = this.sellForm.value as AuctionRequest;
+      this.auctionService.createAuction(auctionData).subscribe({
         next: (response) => {
           this.router.navigate(['/auctions', response.auctionId]);
         },
