@@ -10,8 +10,12 @@ export class AuctionService {
   private http = inject(HttpClient);
   private baseUrl = environment.apiUrl;
 
-  getAuctions() {
-    return this.http.get<Auction[]>(`${this.baseUrl}/auctions`);
+  getAuctions(displayName?: string) {
+    let params = {};
+    if (displayName) {
+      params = {displayName};
+    }
+    return this.http.get<Auction[]>(`${this.baseUrl}/auctions`, {params});
   }
 
   getAuction(auctionId: string) {

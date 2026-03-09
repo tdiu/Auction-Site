@@ -84,19 +84,10 @@
       <!-- Auctions Section -->
       <section>
         <h2 class="text-2xl font-bold mb-6 text-white">Auctions</h2>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- Placeholder Cards -->
-          @for (i of [1,2,3,4]; track i) {
-            <div class="bg-[#242424] p-5 rounded-xl border border-gray-800 hover:border-gray-600 transition-all cursor-pointer">
-              <div class="text-sm font-medium mb-2 line-clamp-2">Lorem Ipsum</div>
-              <div class="flex items-center gap-2 text-xs mb-4">
-                <span class="text-green-500 font-bold">👍 100%</span>
-                <span class="text-gray-500">(130 Sold)</span>
-              </div>
-              <div class="text-right text-xl font-bold text-white">
-                100 <span class="text-xs text-gray-400">CAD</span>
-              </div>
-            </div>
+          @for (auction of auctions$ | async; track auction.auctionId) {
+            <app-auction-card [auction]="auction" size="sm"></app-auction-card>
           }
         </div>
       </section>
