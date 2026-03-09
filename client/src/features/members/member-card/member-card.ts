@@ -1,11 +1,13 @@
 import {Component, input} from '@angular/core';
 import {Member} from '../../../types/member';
 import {RouterLink} from '@angular/router';
+import {DatePipe} from '@angular/common';
 
 @Component({
   selector: 'app-member-card',
   imports: [
-    RouterLink
+    RouterLink,
+    DatePipe
   ],
   templateUrl: './member-card.html',
   styleUrl: './member-card.css',

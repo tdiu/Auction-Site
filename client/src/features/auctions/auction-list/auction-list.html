@@ -1,0 +1,7 @@
+<div class="max-w-[1400px] mx-auto p-6">
+  <div class="grid grid-cols-5 gap-6">
+    @for (auction of auctions$ | async; track auction.auctionId) {
+      <app-auction-card [auction]="auction"></app-auction-card>
+    }
+  </div>
+</div>

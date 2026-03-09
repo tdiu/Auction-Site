@@ -1,43 +1,47 @@
-<header class="p-3 w-full fixed top-0 z-50 bg-gradient-to-r from-primary to-black">
+<header class="p-3 w-full fixed top-0 z-50 bg-[#242424] border-b border-gray-800 shadow-lg">
   <div class="flex align-middle items-center px-10 mx-auto gap-6">
     <a routerLink="/"
-       class="max-h-16 text-white border-r-white border-r-2 pr-6">
-      <h3 class="text-2xl font-semibold text-white uppercase">GWAuction</h3>
+       class="max-h-16 text-white border-r border-gray-700 pr-6">
+      <h3 class="text-2xl font-semibold text-white uppercase tracking-tight">GWAuction</h3>
     </a>
-    <nav class="flex gap-3 my-2 uppercase text-lg text-white">
-      <a routerLink="/members" routerLinkActive="text-accent">Auctions</a>
+    <nav class="flex gap-4 my-2 uppercase text-sm font-bold text-gray-400">
+      <a routerLink="/auctions" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Auctions</a>
       @if (accountService.currentUser()) {
-        <a routerLink="/sell" routerLinkActive="text-accent">Sell</a>
-        <a routerLink="/messages" routerLinkActive="text-accent">Messages</a>
+        <a routerLink="/sell" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Sell</a>
+        <a routerLink="/messages" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Messages</a>
       }
     </nav>
     <div class="flex align-middle ml-auto gap-3">
       @if (accountService.currentUser(); as user) {
         <div class="dropdown dropdown-end">
-          <div tabindex="0" role="button" class="flex items-center text-white text-xl gap-3 cursor-pointer">
-            <span>{{user.displayName}}</span>
-            <img [src]="user?.imageUrl || '/user.png'" alt="user avatar" class="w-10 h-10 rounded-full">
+          <div tabindex="0" role="button" class="flex items-center text-white text-lg gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+            <span class="font-medium text-sm">{{user.displayName}}</span>
+            <div class="w-10 h-10 rounded-full border-2 border-gray-700 overflow-hidden">
+              <img [src]="user?.imageUrl || '/user.png'" alt="user avatar" class="w-full h-full object-cover">
+            </div>
           </div>
-          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2">
-            <li><a href="">Edit Profile</a></li>
-            <li><a (click)="logout()" href="">Logout</a></li>
+          <ul tabindex="0" class="dropdown-content menu bg-[#2a2a2a] border border-gray-800 rounded-xl z-1 w-52 p-2 mt-2 shadow-2xl text-gray-200">
+            <li><a class="hover:bg-gray-800 py-2">Edit Profile</a></li>
+            <li><a (click)="logout()" class="hover:bg-gray-800 py-2 text-red-400">Logout</a></li>
           </ul>
         </div>
       } @else {
-        <form #loginForm="ngForm" (ngSubmit)="login()" class="flex items-center gap-3">
+        <form #loginForm="ngForm" (ngSubmit)="login()" class="flex items-center gap-2">
           <input
             [(ngModel)]="creds.email"
             name="email"
             type="text"
-            class="input"
-            placeholder="email">
+            class="input input-sm bg-[#1a1a1a] border-gray-700 text-white focus:border-[#ff4742] focus:ring-0 w-40"
+            placeholder="Email">
           <input
             [(ngModel)]="creds.password"
             name="password"
             type="password"
-            class="input"
+            class="input input-sm bg-[#1a1a1a] border-gray-700 text-white focus:border-[#ff4742] focus:ring-0 w-40"
             placeholder="Password">
-          <button type="submit" class="btn">Login</button>
+          <button type="submit" class="btn btn-sm bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-6">
+            Login
+          </button>
         </form>
       }
     </div>

@@ -1,42 +1,55 @@
-<div class="hero bg-base-200 min-h-screen">
+<div class="hero min-h-screen bg-[#1a1a1a] text-gray-200">
   @if (!registerMode()) {
     @if (accountService.currentUser()) {
       <div class="hero-content text-center">
-        <div class="flex flex-col items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-42 text-primary">
+        <div class="flex flex-col items-center max-w-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="size-48 text-[#ff4742] mb-8 opacity-90">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
           </svg>
 
-          <h1 class="text-5xl font-bold">Buy and Sell</h1>
-          <p class="py-6">A convenient way to buy and sell your items</p>
-          <div class="flex items-center gap-3">
-            <button routerLink="/users" class="btn btn-primary btn-lg">Browse Auctions</button>
-            <button routerLink="/sell" class="btn btn-info btn-lg">Sell</button>
+          <h1 class="text-6xl font-black text-white tracking-tight italic uppercase">Buy and Sell</h1>
+          <p class="py-6 text-xl text-gray-400 font-medium leading-relaxed">
+            The premier marketplace for rare items and epic loot. 
+            Join thousands of traders today.
+          </p>
+          <div class="flex items-center gap-4 mt-4">
+            <button routerLink="/auctions" class="btn btn-lg bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-10 shadow-lg shadow-red-900/20">
+              Browse Auctions
+            </button>
+            <button routerLink="/sell" class="btn btn-lg bg-[#2ecc71] hover:bg-[#27ae60] border-none text-white normal-case px-10 shadow-lg shadow-green-900/20">
+              Start Selling
+            </button>
           </div>
         </div>
       </div>
     } @else {
       <div class="hero-content text-center">
-        <div class="flex flex-col items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-42 text-primary">
+        <div class="flex flex-col items-center max-w-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="size-48 text-[#ff4742] mb-8 opacity-90">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
           </svg>
 
-          <h1 class="text-5xl font-bold">Buy and Sell</h1>
-          <p class="py-6">A convenient way to buy and sell your items</p>
-          <div class="flex items-center gap-3">
-            <button (click)="showRegister(true)" class="btn btn-primary btn-lg">Register</button>
-            <button class="btn btn-info btn-lg">Learn More</button>
+          <h1 class="text-6xl font-black text-white tracking-tight italic uppercase">GWAuction</h1>
+          <p class="py-6 text-xl text-gray-400 font-medium leading-relaxed">
+            A convenient way to buy and sell your items. 
+            Ready to start your journey?
+          </p>
+          <div class="flex items-center gap-4 mt-4">
+            <button (click)="showRegister(true)" class="btn btn-lg bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-12 shadow-lg shadow-red-900/20">
+              Register Now
+            </button>
+            <button class="btn btn-lg bg-[#242424] border border-gray-700 hover:bg-gray-800 text-white normal-case px-12 shadow-lg">
+              Learn More
+            </button>
           </div>
         </div>
       </div>
     }
   } @else {
-    <div class="w-full text-2xl text-center flex justify-center">
+    <div class="w-full max-w-xl mx-auto p-8 bg-[#242424] rounded-2xl border border-gray-800 shadow-2xl">
       <app-register class="w-full"
                     (cancelRegister)="showRegister($event)">
       </app-register>
     </div>
   }
-
 </div>
