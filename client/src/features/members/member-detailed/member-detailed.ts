@@ -9,7 +9,7 @@ import {AuctionCard} from '../../auctions/auction-card/auction-card';
 
 @Component({
   selector: 'app-member-detailed',
-  imports: [AsyncPipe, RouterLink, RouterLinkActive, DatePipe, AuctionCard],
+  imports: [AsyncPipe, DatePipe, AuctionCard],
   templateUrl: './member-detailed.html',
   styleUrl: './member-detailed.css',
 })

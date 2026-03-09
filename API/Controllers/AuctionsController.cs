@@ -41,9 +41,14 @@ public class AuctionsController(AppDbContext context, IAuctionRepository auction
     }
 
     [Authorize]
-    [HttpPost("sell")]
+    [HttpPost]
     public async Task<ActionResult<AuctionResponseDto>> CreateAuction(AuctionRequestDto auctionRequestDto)
     {
+        if (auctionRequestDto.BuyNowPrice.HasValue && auctionRequestDto.BuyNowPrice.Value < auctionRequestDto.StartingPrice)
+        {
+            return BadRequest("Buy Now price must be at least the starting price.");
+        }
+
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
         

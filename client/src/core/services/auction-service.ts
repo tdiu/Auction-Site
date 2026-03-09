@@ -22,4 +22,7 @@ export class AuctionService {
     return this.http.get<Auction>(`${this.baseUrl}/auctions/${auctionId}`);
   }
 
+  createAuction(auctionData: {itemName: string, startingPrice: number, buyNowPrice?: number | null}) {
+    return this.http.post<Auction>(`${this.baseUrl}/auctions`, auctionData);
+  }
 }

@@ -6,7 +6,7 @@ import {AsyncPipe, DatePipe} from '@angular/common';
 
 @Component({
   selector: 'app-auction-detailed',
-  imports: [AsyncPipe, DatePipe, RouterLink],
+  imports: [AsyncPipe, RouterLink],
   templateUrl: './auction-detailed.html',
   styleUrl: './auction-detailed.css',
 })

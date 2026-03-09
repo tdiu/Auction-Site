@@ -1,1 +1,74 @@
-<p>lists works!</p>
+<div class="max-w-2xl mx-auto p-8 mt-10 bg-[#242424] rounded-2xl shadow-2xl border border-gray-800">
+  <div class="mb-8 text-center">
+    <h2 class="text-3xl font-extrabold text-white">List an Item for Auction</h2>
+    <p class="text-gray-400 mt-2">Provide the details of the item you want to sell.</p>
+  </div>
+
+  <form [formGroup]="sellForm" (ngSubmit)="onSubmit()" class="space-y-6">
+    <!-- Item Name -->
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-2" for="itemName">Item Name</label>
+      <input
+        type="text"
+        id="itemName"
+        formControlName="itemName"
+        placeholder="e.g. Rare Vintage Sword"
+        class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all"
+        [class.border-red-500]="sellForm.get('itemName')?.invalid && sellForm.get('itemName')?.touched"
+      >
+      @if (sellForm.get('itemName')?.invalid && sellForm.get('itemName')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Item name is required (min 3 characters).</p>
+      }
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Starting Price -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2" for="startingPrice">Starting Price (CAD)</label>
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+          <input
+            type="number"
+            id="startingPrice"
+            formControlName="startingPrice"
+            class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg pl-8 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all"
+            [class.border-red-500]="sellForm.get('startingPrice')?.invalid && sellForm.get('startingPrice')?.touched"
+          >
+        </div>
+        @if (sellForm.get('startingPrice')?.invalid && sellForm.get('startingPrice')?.touched) {
+          <p class="text-red-500 text-xs mt-1">Starting price must be at least 1 CAD.</p>
+        }
+      </div>
+
+      <!-- Buy Now Price -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2" for="buyNowPrice">Buy Now Price (Optional)</label>
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+          <input
+            type="number"
+            id="buyNowPrice"
+            formControlName="buyNowPrice"
+            placeholder="Set a fixed price"
+            class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg pl-8 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all"
+            [class.border-red-500]="sellForm.errors?.['buyNowPriceTooLow'] && sellForm.get('buyNowPrice')?.touched"
+          >
+        </div>
+        @if (sellForm.errors?.['buyNowPriceTooLow'] && sellForm.get('buyNowPrice')?.touched) {
+          <p class="text-red-500 text-xs mt-1">Buy Now price must equal to or higher than starting price</p>
+        }
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="pt-6">
+      <button
+        type="submit"
+        [disabled]="sellForm.invalid"
+        class="w-full bg-[#ff4742] hover:bg-[#e63e39] text-white font-bold py-4 rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg"
+      >
+        List Item for Sale
+      </button>
+    </div>
+  </form>
+</div>
