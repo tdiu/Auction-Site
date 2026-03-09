@@ -5,6 +5,7 @@ export type Auction = {
   startingPrice: number,
   buyNowPrice: number,
   sellerId: string,
+  sellerName: string,
   startTime: string,
   endTime: string,
 }

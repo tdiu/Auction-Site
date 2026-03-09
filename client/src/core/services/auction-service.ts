@@ -14,4 +14,8 @@ export class AuctionService {
     return this.http.get<Auction[]>(`${this.baseUrl}/auctions`);
   }
 
+  getAuction(auctionId: string) {
+    return this.http.get<Auction>(`${this.baseUrl}/auctions/${auctionId}`);
+  }
+
 }
