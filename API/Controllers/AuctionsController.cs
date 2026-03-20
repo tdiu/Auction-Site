@@ -19,6 +19,7 @@ public class AuctionsController(AppDbContext context, IAuctionRepository auction
     {
         var query = auctionRepository.GetAuctionsQueryable();
 
+        // Filter by queries
         if (!string.IsNullOrEmpty(displayName))
         {
             query = query.Where(a => a.Seller.DisplayName == displayName);
