@@ -10,65 +10,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
 
-public class AuctionsController(AppDbContext context, IAuctionRepository auctionRepository) : BaseApiController
+public class AuctionsController(IAuctionService auctionService) : BaseApiController
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions(
         [FromQuery] string? displayName, 
         [FromQuery] string? searchTerm)
     {
-        var query = auctionRepository.GetAuctionsQueryable();
-
-        // Filter by queries
-        if (!string.IsNullOrEmpty(displayName))
-        {
-            query = query.Where(a => a.Seller.DisplayName == displayName);
-        }
-
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            query = query.Where(a => a.ItemName.ToLower().Contains(searchTerm.ToLower()));
-        }
-
-        return await query.ProjectToDto().ToListAsync();
+        var auctions = await auctionService.GetAllAuctions(displayName, searchTerm);
+        return Ok(auctions);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<AuctionResponseDto>> GetAuction(int id)
     {
-        var auction = await auctionRepository.GetAuctionAsync(id);
+        var auction = await auctionService.GetAuctionById(id);
+        if (!auction.IsSuccess) return NotFound();
         
-        return auction == null ? NotFound() : auction;
+        return Ok(auction.Value);
     }
 
     [Authorize]
     [HttpPost]
     public async Task<ActionResult<AuctionResponseDto>> CreateAuction(AuctionRequestDto auctionRequestDto)
     {
-        if (auctionRequestDto.BuyNowPrice.HasValue && auctionRequestDto.BuyNowPrice.Value < auctionRequestDto.StartingPrice)
-        {
-            return BadRequest("Buy Now price must be at least the starting price.");
-        }
-
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
         
-        var currTime = DateTimeOffset.UtcNow;
-        
-        var auction = new Auction()
-        {
-            ItemName = auctionRequestDto.ItemName,
-            StartingPrice = auctionRequestDto.StartingPrice,
-            BuyNowPrice = auctionRequestDto.BuyNowPrice,
-            SellerId = userId,
-            StartTime = currTime,
-            EndTime = currTime.AddDays(7)
-        };
-        
-        await auctionRepository.CreateAuctionAsync(auction);
-        var responseDto = await auctionRepository.GetAuctionAsync(auction.AuctionId);
-
-        if (responseDto == null) return NotFound();
-        return responseDto;
+        var res = await auctionService.CreateAuction(auctionRequestDto, userId);
+        if (!res.IsSuccess) return BadRequest(res.Error);
+        return Ok(res.Value);
     }
 }
