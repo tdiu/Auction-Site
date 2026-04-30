@@ -33,5 +33,18 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
         modelBuilder.Entity<AppUser>()
             .Property(u => u.LastActive)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        // Fix for multiple cascade paths on Bid (Dependency Loop)
+        modelBuilder.Entity<Bid>()
+            .HasOne(b => b.Bidder)
+            .WithMany(u => u.Bids)
+            .HasForeignKey(b => b.BidderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Bid>()
+            .HasOne(b => b.Auction)
+            .WithMany(a => a.Bids)
+            .HasForeignKey(b => b.AuctionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

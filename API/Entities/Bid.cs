@@ -5,10 +5,10 @@ namespace API.Entities;
 public class Bid
 {
     public int BidId { get; set; }
-    public decimal BidAmount { get; set; }
-    public DateTimeOffset BidDate { get; set; }
-    public int AuctionId { get; set; }
-    public string BidderId { get; set; }
+    public required decimal BidAmount { get; set; }
+    public required DateTimeOffset BidDate { get; set; }
+    public required int AuctionId { get; set; }
+    public required string BidderId { get; set; }
     
     // nav prop
     [ForeignKey(nameof(AuctionId))]
