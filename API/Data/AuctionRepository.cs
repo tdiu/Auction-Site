@@ -13,10 +13,10 @@ public class AuctionRepository(AppDbContext context) : IAuctionRepository
         return context.Auctions;
     }
 
-    public async Task<AuctionResponseDto?> GetAuctionAsync(int id)
+    public async Task<Auction?> GetAuctionAsync(int id)
     {
         return await context.Auctions
-            .ProjectToDto()
+            .Include(a => a.Seller)
             .FirstOrDefaultAsync(a => a.AuctionId == id);
     }
 

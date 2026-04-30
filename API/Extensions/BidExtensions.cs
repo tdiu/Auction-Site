@@ -7,15 +7,27 @@ public static class BidExtensions
 {
     public static IQueryable<BidResponseDto> ProjectToDto(this IQueryable<Bid> query)
     {
-        return query.Select(a => new BidResponseDto
+        return query.Select(b => new BidResponseDto
         {
-            BidId = a.BidId,
-            AuctionId = a.AuctionId,
-            BidAmount = a.BidAmount,
-            BidDate = a.BidDate,
-            BidderId = a.BidderId,
-            BidderName = a.Bidder.DisplayName
+            BidId = b.BidId,
+            AuctionId = b.AuctionId,
+            BidAmount = b.BidAmount,
+            BidDate = b.BidDate,
+            BidderId = b.BidderId,
+            BidderName = b.Bidder.DisplayName
         });
+    }
 
+    public static BidResponseDto ToDto(this Bid b)
+    {
+        return new BidResponseDto
+        {
+            BidId = b.BidId,
+            AuctionId = b.AuctionId,
+            BidAmount = b.BidAmount,
+            BidDate = b.BidDate,
+            BidderId = b.BidderId,
+            BidderName = b.Bidder.DisplayName
+        };
     }
 }

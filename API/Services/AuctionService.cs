@@ -29,7 +29,7 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
     public async Task<Result<AuctionResponseDto>> GetAuctionById(int id)
     {
         var auction = await auctionRepository.GetAuctionAsync(id);
-        return auction == null ? Result<AuctionResponseDto>.Failure("Auction not found") :  Result<AuctionResponseDto>.Success(auction);
+        return auction == null ? Result<AuctionResponseDto>.Failure("Auction not found") :  Result<AuctionResponseDto>.Success(auction.ToDto());
     }
 
     public async Task<Result<AuctionResponseDto>> CreateAuction(AuctionRequestDto auctionRequestDto, string userId)
@@ -51,7 +51,7 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
         };
         
         await auctionRepository.CreateAuctionAsync(auction);
-        var responseDto = await auctionRepository.GetAuctionAsync(auction.AuctionId);
-        return responseDto == null ? Result<AuctionResponseDto>.Failure("Not Found") :  Result<AuctionResponseDto>.Success(responseDto);
+        var response = await auctionRepository.GetAuctionAsync(auction.AuctionId);
+        return response == null ? Result<AuctionResponseDto>.Failure("Not Found") :  Result<AuctionResponseDto>.Success(response.ToDto());
     }
 }

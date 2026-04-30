@@ -9,6 +9,7 @@ public class AuctionResponseDto
     [Required] public string ItemName { get; set; } = "";
     [Required] public decimal StartingPrice { get; set; } = 0;
     public decimal? BuyNowPrice { get; set; }
+    public decimal? CurrentHighBid  { get; set; }
     [Required]
     public string SellerId { get; set; } = "";
     [Required]
