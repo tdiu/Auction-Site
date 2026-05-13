@@ -14,8 +14,7 @@ namespace API.Data.Migrations
                 name: "CurrentHighBid",
                 table: "Auctions",
                 type: "TEXT",
-                nullable: false,
-                defaultValue: 0m);
+                nullable: true);
         }
 
         /// <inheritdoc />

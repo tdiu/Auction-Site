@@ -2,6 +2,7 @@ using API.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace API.Data;
 
@@ -46,5 +47,32 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             .WithMany(a => a.Bids)
             .HasForeignKey(b => b.AuctionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Fix for SQLite DateTimeOffset ordering
+        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            var dateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTimeOffset, string>(
+                v => v.ToString("O"),
+                v => DateTimeOffset.Parse(v));
+                
+            var nullableDateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTimeOffset?, string?>(
+                v => v.HasValue ? v.Value.ToString("O") : null,
+                v => v == null ? null : DateTimeOffset.Parse(v));
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(DateTimeOffset))
+                    {
+                        property.SetValueConverter(dateTimeOffsetConverter);
+                    }
+                    else if (property.ClrType == typeof(DateTimeOffset?))
+                    {
+                        property.SetValueConverter(nullableDateTimeOffsetConverter);
+                    }
+                }
+            }
+        }
     }
 }

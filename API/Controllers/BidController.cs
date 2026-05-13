@@ -10,14 +10,14 @@ namespace API.Controllers;
 
 public class BidController (IAuctionService auctionService, IBidService bidService) : BaseApiController
 {
-   [HttpGet("api/auctions/{auctionId}/bids")]
+   [HttpGet("/api/auctions/{auctionId}/bids")]
    public async Task<IActionResult> GetBids(int auctionId)
    {
       var bids = await bidService.GetAllBids(auctionId);
       return Ok(bids);
    }
 
-   [HttpPost("api/auctions/{auctionId}/bids")]
+   [HttpPost("/api/auctions/{auctionId}/bids")]
    [Authorize]
    public async Task<ActionResult<BidResponseDto>> PlaceBid([FromBody] BidRequestDto bidRequestDto, int auctionId)
    {

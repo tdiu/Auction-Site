@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260430225449_AddCurrentHighBidToAuction")]
+    [Migration("20260513002229_AddCurrentHighBidToAuction")]
     partial class AddCurrentHighBidToAuction
     {
         /// <inheritdoc />
@@ -125,7 +125,7 @@ namespace API.Data.Migrations
                     b.Property<decimal?>("BuyNowPrice")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("CurrentHighBid")
+                    b.Property<decimal?>("CurrentHighBid")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("EndTime")

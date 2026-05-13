@@ -122,7 +122,7 @@ namespace API.Data.Migrations
                     b.Property<decimal?>("BuyNowPrice")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("CurrentHighBid")
+                    b.Property<decimal?>("CurrentHighBid")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("EndTime")

@@ -23,6 +23,9 @@ builder.Services.AddScoped<iTokenService, TokenService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuctionRepository, AuctionRepository>();
 builder.Services.AddScoped<IAuctionService, AuctionService>();
+builder.Services.AddScoped<IBidRepository, BidRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IBidService, BidService>();
 builder.Services.AddIdentityCore<AppUser>(options =>
     {
         options.Password.RequireNonAlphanumeric = false;
