@@ -13,6 +13,7 @@ public class Auction
     public required DateTimeOffset EndTime { get; set; }
     public ICollection<Bid> Bids { get; set; } = new List<Bid>();
     public decimal? CurrentHighBid { get; set; }
+    public string? CurrentHighBidderId { get; set; }
     
     // navigation props
     [ForeignKey(nameof(SellerId))]

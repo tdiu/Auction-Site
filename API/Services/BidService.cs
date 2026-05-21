@@ -22,11 +22,14 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
     public async Task<Result<BidResponseDto>> PlaceBid(BidRequestDto bidRequestDto, int auctionId, string userId)
     {
         var auction = await unitOfWork.Auctions.GetAuctionAsync(auctionId);
-        var amount = bidRequestDto.Amount;
-        
-        if (auction == null) throw new Exception("Auction not found");
+        if (auction == null) return Result<BidResponseDto>.Failure("Auction not found");
 
-        if (amount <= auction.CurrentHighBid) return Result<BidResponseDto>.Failure("Bid is too low");
+        if (auction.CurrentHighBidderId == userId) 
+            return Result<BidResponseDto>.Failure("You are already the highest bidder");
+
+        var amount = bidRequestDto.Amount;
+        if (amount <= (auction.CurrentHighBid ?? auction.StartingPrice)) 
+            return Result<BidResponseDto>.Failure("Bid is too low");
         
         var currTime = DateTimeOffset.UtcNow;
         
@@ -40,6 +43,7 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
 
         unitOfWork.Bids.Add(newBid);
         auction.CurrentHighBid = amount;
+        auction.CurrentHighBidderId = userId;
         
         var success= await unitOfWork.CompleteAsync();
         if (!success) return Result<BidResponseDto>.Failure("Failed to save bid");

@@ -4,6 +4,8 @@ export type Auction = {
   imageUrl?: string,
   startingPrice: number,
   buyNowPrice: number,
+  currentHighBid?: number,
+  currentHighBidderId?: string,
   sellerId: string,
   sellerName: string,
   startTime: string,
