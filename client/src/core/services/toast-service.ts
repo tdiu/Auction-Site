@@ -25,8 +25,11 @@ export class ToastService {
 
     const toast = document.createElement('div');
     toast.classList.add('alert', alertClass, 'shadow-lg');
+    
+    const displayMessage = typeof message === 'string' ? message : JSON.stringify(message);
+
     toast.innerHTML = `
-    <span>${message}</span>
+    <span>${displayMessage}</span>
     <button class="ml-4 btn btn-sm btn-ghost">x</button>
     `
 

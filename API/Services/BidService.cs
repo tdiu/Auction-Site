@@ -47,6 +47,9 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         
         var success= await unitOfWork.CompleteAsync();
         if (!success) return Result<BidResponseDto>.Failure("Failed to save bid");
+
+        // Populate the bidder to avoid NullRef in ToDto
+        newBid.Bidder = (await unitOfWork.Users.GetUserByIdAsync(userId))!;
         
         return Result<BidResponseDto>.Success(newBid.ToDto());
     }

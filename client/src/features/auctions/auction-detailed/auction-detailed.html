@@ -67,22 +67,25 @@
           <div class="flex items-center bg-[#1a1a1a] p-1 rounded-full border border-gray-800 w-full max-w-[240px]">
             <input #bidInput
                    type="number"
-                   [placeholder]="auction.startingPrice"
+                   [placeholder]="auction.currentHighBid || auction.startingPrice"
                    class="bg-transparent text-center flex-grow py-2 text-lg font-bold text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                   [value]="auction.startingPrice"
+                   [value]="(auction.currentHighBid || auction.startingPrice) + 1"
                    (keydown)="onlyNumbers($event)">
           </div>
 
-          <div class="text-[10px] text-gray-500 font-medium">Starting Price
-            <span class="text-white pl-2 pr-1">{{auction.startingPrice}}</span> <span class="text-[8px] uppercase">CAD</span>
+          <div class="text-[10px] text-gray-500 font-medium">
+            {{ auction.currentHighBid ? 'Current Bid' : 'Starting Price' }}
+            <span class="text-white pl-2 pr-1">{{ auction.currentHighBid || auction.startingPrice }}</span> <span class="text-[8px] uppercase">CAD</span>
           </div>
 
           <div class="w-full flex flex-col items-center gap-4 mt-2">
-            @let isHighBidder = accountService.currentUser()?.id === auction.currentHighBidderId;
+            @let currentUser = accountService.currentUser();
+            @let isHighBidder = !!(currentUser && auction.currentHighBidderId && currentUser.id === auction.currentHighBidderId);
+            @let isSeller = !!(currentUser && currentUser.id === auction.sellerId);
             <button (click)="placeBid(auction.auctionId, bidInput.value)"
-                    [disabled]="isHighBidder"
+                    [disabled]="isHighBidder || isSeller || !currentUser"
                     class="btn btn-sm w-3/4 bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case font-bold text-sm h-10 rounded-xl disabled:bg-gray-700 disabled:text-gray-400">
-              {{ isHighBidder ? 'You are the High Bidder' : 'Bid' }}
+              {{ !currentUser ? 'Login to Bid' : isSeller ? 'You are the Seller' : isHighBidder ? 'You are the High Bidder' : 'Bid' }}
             </button>
 
             @if (auction.buyNowPrice) {

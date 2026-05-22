@@ -5,7 +5,6 @@ import {inject} from '@angular/core';
 import {NavigationExtras, Router} from '@angular/router';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  const toast = inject(ToastService);
   const router = inject(Router);
   return next(req).pipe(
     catchError((error) => {
@@ -20,12 +19,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
                 }
               }
               throw modelStateErrors.flat();
-            } else {
-              toast.error(error.error);
             }
             break;
           case 401:
-            toast.error('Unauthorized');
             break;
           case 404:
             router.navigateByUrl('/not-found')
@@ -35,7 +31,6 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             router.navigateByUrl('/server-error', navigationExtras)
             break;
           default:
-            toast.error("Something went wrong");
             break;
         }
       }

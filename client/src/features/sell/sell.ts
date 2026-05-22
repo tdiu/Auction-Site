@@ -3,6 +3,7 @@ import {AuctionService} from '../../core/services/auction-service';
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators} from '@angular/forms';
 import {Router} from '@angular/router';
 import {AuctionRequest} from '../../types/auction';
+import {ToastService} from '../../core/services/toast-service';
 
 const buyNowPriceValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const startingPrice = control.get('startingPrice');
@@ -21,6 +22,7 @@ const buyNowPriceValidator: ValidatorFn = (control: AbstractControl): Validation
 })
 export class Sell {
   private auctionService = inject(AuctionService);
+  private toast = inject(ToastService);
   private fb = inject(FormBuilder);
   private router = inject(Router);
 
@@ -38,7 +40,7 @@ export class Sell {
           this.router.navigate(['/auctions', response.auctionId]);
         },
         error: (error) => {
-          console.error('Error creating auction:', error);
+          this.toast.error(error.error || 'Failed to create auction');
         }
       });
     }

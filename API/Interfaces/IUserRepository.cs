@@ -13,4 +13,5 @@ public interface IUserRepository
     Task<bool> EmailExists(string email);
     Task<bool> DisplayNameExists(string displayName);
     Task<AppUser?> GetUserByEmailAsync(string email);
+    Task<AppUser?> GetUserByIdAsync(string id);
 }

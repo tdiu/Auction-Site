@@ -23,7 +23,7 @@ export class Nav {
         this.creds = {};
       },
       error: error => {
-        this.toast.error(error.error);
+        this.toast.error(error.error || 'Login failed');
       },
     })
   }
