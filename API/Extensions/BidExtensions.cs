@@ -27,7 +27,21 @@ public static class BidExtensions
             BidAmount = b.BidAmount,
             BidDate = b.BidDate,
             BidderId = b.BidderId,
-            BidderName = b.Bidder.DisplayName
+            BidderName = ObfuscateName(b.Bidder.DisplayName)
         };
+    }
+
+    public static void ObfuscateBidderNames(this IEnumerable<BidResponseDto> bids)
+    {
+        foreach (var bid in bids)
+            bid.BidderName = ObfuscateName(bid.BidderName);
+    }
+
+    private static string ObfuscateName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "Anonymous";
+        if (name.Length == 1) return name + "***";
+        if (name.Length == 2) return name[0] + "***";
+        return name[0] + "***" + name[^1];
     }
 }

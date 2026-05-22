@@ -16,7 +16,9 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
             .Where(b => b.AuctionId == auctionId)
             .OrderByDescending(b => b.BidDate);
         
-        return await query.ProjectToDto().ToListAsync();
+        var bids = await query.ProjectToDto().ToListAsync();
+        bids.ObfuscateBidderNames();
+        return bids;
     }
 
     public async Task<Result<BidResponseDto>> PlaceBid(BidRequestDto bidRequestDto, int auctionId, string userId)
