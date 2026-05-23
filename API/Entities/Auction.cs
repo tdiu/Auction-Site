@@ -14,6 +14,8 @@ public class Auction
     public ICollection<Bid> Bids { get; set; } = new List<Bid>();
     public decimal? CurrentHighBid { get; set; }
     public string? CurrentHighBidderId { get; set; }
+
+    public AuctionStatus Status { get; set; }
     
     // navigation props
     [ForeignKey(nameof(SellerId))]

@@ -9,6 +9,17 @@
          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
          [class.opacity-20]="!item.imageUrl"
          [class.group-hover:opacity-40]="!item.imageUrl">
+    
+    <!-- Countdown Timer Badge -->
+    <div class="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 flex items-center gap-1.5 z-10">
+      <div class="w-1.5 h-1.5 rounded-full animate-pulse" 
+           [class.bg-green-500]="(timeLeft$ | async) !== 'Ended'"
+           [class.bg-red-500]="(timeLeft$ | async) === 'Ended'">
+      </div>
+      <span class="text-[10px] font-bold text-white uppercase tracking-wider tabular-nums">
+        {{timeLeft$ | async}}
+      </span>
+    </div>
   </div>
 
   <!-- Content -->

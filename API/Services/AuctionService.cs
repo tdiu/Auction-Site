@@ -11,9 +11,15 @@ namespace API.Services;
 
 public class AuctionService(IAuctionRepository auctionRepository) : IAuctionService
 {
-    public async Task<IReadOnlyList<AuctionResponseDto>> GetAllAuctions(string? displayName, string? searchTerm)
+    public async Task<IReadOnlyList<AuctionResponseDto>> GetAllAuctions(string? displayName, string? searchTerm, AuctionStatus? status)
     {
         var query = auctionRepository.GetAuctionsQueryable();
+
+        // Default to Active if no status is specified
+        var filterStatus = status ?? AuctionStatus.Active;
+        
+        query = query.Where(a => a.Status == filterStatus);
+
         // Filter by queries
         if (!string.IsNullOrEmpty(displayName))
         {
@@ -47,7 +53,8 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
             BuyNowPrice = auctionRequestDto.BuyNowPrice,
             SellerId = userId,
             StartTime = currTime,
-            EndTime = currTime.AddDays(7)
+            EndTime = currTime.AddDays(7),
+            Status = AuctionStatus.Active,
         };
         
         await auctionRepository.CreateAuctionAsync(auction);

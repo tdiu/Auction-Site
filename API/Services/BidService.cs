@@ -26,6 +26,9 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         var auction = await unitOfWork.Auctions.GetAuctionAsync(auctionId);
         if (auction == null) return Result<BidResponseDto>.Failure("Auction not found");
 
+        if (auction.Status != AuctionStatus.Active || auction.EndTime < DateTimeOffset.UtcNow)
+            return Result<BidResponseDto>.Failure("This auction has already ended");
+
         if (auction.CurrentHighBidderId == userId) 
             return Result<BidResponseDto>.Failure("You are already the highest bidder");
 
@@ -34,6 +37,15 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
             return Result<BidResponseDto>.Failure("Bid is too low");
         
         var currTime = DateTimeOffset.UtcNow;
+        
+        //
+        if (auction.BuyNowPrice.HasValue && amount >= auction.BuyNowPrice)
+        {
+            auction.Status = AuctionStatus.Ended;
+            amount =  auction.BuyNowPrice.Value;
+            auction.Status = AuctionStatus.Ended;
+            auction.EndTime = currTime;
+        }
         
         var newBid = new Bid
         {

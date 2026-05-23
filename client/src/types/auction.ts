@@ -10,10 +10,11 @@ export type Auction = {
   sellerName: string,
   startTime: string,
   endTime: string,
+  status: string,
 }
 
 export type AuctionRequest = {
-  auctionId: string,
+  itemName: string,
   startingPrice: number,
   buyNowPrice?: number | null;
 }

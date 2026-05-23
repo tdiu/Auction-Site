@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using API.Entities;
 
 namespace API.DTOs;
 
@@ -17,4 +18,6 @@ public class AuctionResponseDto
     public string SellerName { get; set; } = "";
     public DateTimeOffset StartTime { get; set; }
     public DateTimeOffset EndTime { get; set; }
+    
+    public AuctionStatus Status { get; set; }
 }

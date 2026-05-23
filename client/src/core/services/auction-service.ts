@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpParams} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {Auction, AuctionRequest} from '../../types/auction';
 
@@ -10,11 +10,12 @@ export class AuctionService {
   private http = inject(HttpClient);
   private baseUrl = environment.apiUrl;
 
-  getAuctions(displayName?: string) {
-    let params = {};
-    if (displayName) {
-      params = {displayName};
-    }
+  getAuctions(displayName?: string, searchTerm?: string, status?: string) {
+    let params = new HttpParams();
+    if (displayName) params = params.set('displayName', displayName);
+    if (searchTerm) params = params.set('searchTerm', searchTerm);
+    if (status) params = params.set('status', status);
+
     return this.http.get<Auction[]>(`${this.baseUrl}/auctions`, {params});
   }
 

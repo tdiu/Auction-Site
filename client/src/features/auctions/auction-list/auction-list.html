@@ -1,7 +1,40 @@
 <div class="max-w-[1400px] mx-auto p-6">
+  
+  <!-- Filter Controls -->
+  <div class="flex justify-center mb-8">
+    <div class="bg-[#242424] p-1 rounded-xl border border-gray-800 flex gap-1">
+      @let currentStatus = (status$ | async);
+      <button (click)="setStatus('Active')" 
+              [class.bg-[#ff4742]]="currentStatus === 'Active'"
+              [class.text-white]="currentStatus === 'Active'"
+              [class.text-gray-400]="currentStatus !== 'Active'"
+              class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
+        Active
+      </button>
+      <button (click)="setStatus('Ended')" 
+              [class.bg-[#ff4742]]="currentStatus === 'Ended'"
+              [class.text-white]="currentStatus === 'Ended'"
+              [class.text-gray-400]="currentStatus !== 'Ended'"
+              class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
+        Ended
+      </button>
+      <button (click)="setStatus('Expired')" 
+              [class.bg-[#ff4742]]="currentStatus === 'Expired'"
+              [class.text-white]="currentStatus === 'Expired'"
+              [class.text-gray-400]="currentStatus !== 'Expired'"
+              class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
+        Expired
+      </button>
+    </div>
+  </div>
+
   <div class="grid grid-cols-5 gap-6">
     @for (auction of auctions$ | async; track auction.auctionId) {
       <app-auction-card [auction]="auction"></app-auction-card>
+    } @empty {
+      <div class="col-span-5 py-20 text-center">
+        <p class="text-gray-500 uppercase tracking-[0.3em] text-sm">No auctions found for this category</p>
+      </div>
     }
   </div>
 </div>

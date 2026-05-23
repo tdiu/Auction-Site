@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using API.DTOs;
+using API.Entities;
 using API.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,9 +12,10 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions(
         [FromQuery] string? displayName, 
-        [FromQuery] string? searchTerm)
+        [FromQuery] string? searchTerm,
+        [FromQuery] AuctionStatus? status)
     {
-        var auctions = await auctionService.GetAllAuctions(displayName, searchTerm);
+        var auctions = await auctionService.GetAllAuctions(displayName, searchTerm, status);
         return Ok(auctions);
     }
 

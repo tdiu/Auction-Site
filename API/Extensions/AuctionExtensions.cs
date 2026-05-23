@@ -20,6 +20,7 @@ public static class AuctionExtensions
             EndTime = a.EndTime,
             CurrentHighBid = a.CurrentHighBid,
             CurrentHighBidderId = a.CurrentHighBidderId,
+            Status = a.Status,
         });
 
     }
@@ -38,6 +39,7 @@ public static class AuctionExtensions
             EndTime = a.EndTime,
             CurrentHighBid = a.CurrentHighBid,
             CurrentHighBidderId = a.CurrentHighBidderId,
+            Status = a.Status,
         };
     }
 }
