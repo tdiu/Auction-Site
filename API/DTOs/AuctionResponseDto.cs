@@ -16,6 +16,7 @@ public class AuctionResponseDto
     public string SellerId { get; set; } = "";
     [Required]
     public string SellerName { get; set; } = "";
+    public DateTimeOffset SellerCreatedAt { get; set; }
     public DateTimeOffset StartTime { get; set; }
     public DateTimeOffset EndTime { get; set; }
     

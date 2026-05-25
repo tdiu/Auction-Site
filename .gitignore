@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 API/appsettings.json
 API/auction.db*
 /API/gemini
+
+# Antigravity CLI
+.antigravitycli/

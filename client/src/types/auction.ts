@@ -8,6 +8,7 @@ export type Auction = {
   currentHighBidderId?: string,
   sellerId: string,
   sellerName: string,
+  sellerCreatedAt: string,
   startTime: string,
   endTime: string,
   status: string,

@@ -1,7 +1,7 @@
 import {Component, inject} from '@angular/core';
 import {AuctionService} from '../../../core/services/auction-service';
 import {ActivatedRoute, RouterLink} from '@angular/router';
-import {BehaviorSubject, combineLatest, map, switchMap, timer} from 'rxjs';
+import {BehaviorSubject, combineLatest, finalize, map, switchMap, timer} from 'rxjs';
 import {AsyncPipe, DatePipe} from '@angular/common';
 import {BidService} from '../../../core/services/bid-service';
 import {ToastService} from '../../../core/services/toast-service';
@@ -24,6 +24,7 @@ export class AuctionDetailed {
 
   private refreshAuction$ = new BehaviorSubject<void>(undefined);
   showBids = false;
+  isPlacingBid = false;
 
   protected auction$ = combineLatest([
     this.route.paramMap,
@@ -72,7 +73,10 @@ export class AuctionDetailed {
       return;
     }
 
-    this.bidService.createBid(auctionId, {amount: parseFloat(amount)}).subscribe({
+    this.isPlacingBid = true;
+    this.bidService.createBid(auctionId, {amount: parseFloat(amount)}).pipe(
+      finalize(() => this.isPlacingBid = false)
+    ).subscribe({
       next: () => {
         this.toastService.success('Bid placed successfully');
         this.refreshAuction$.next();

@@ -11,7 +11,16 @@
         <a routerLink="/messages" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Messages</a>
       }
     </nav>
-    <div class="flex align-middle ml-auto gap-3">
+    <div class="flex-1 flex justify-center mx-6">
+      <label class="input input-sm bg-[#1a1a1a] border-gray-700 flex items-center gap-2 w-full max-w-md">
+        <svg class="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="search" class="grow bg-transparent text-white placeholder-gray-500 outline-none" placeholder="Search auctions..." />
+      </label>
+    </div>
+    <div class="flex align-middle gap-3">
       @if (accountService.currentUser(); as user) {
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="flex items-center text-white text-lg gap-3 cursor-pointer hover:opacity-80 transition-opacity">
