@@ -1,14 +1,122 @@
-<div class="card bg-base-100 w-1/2 mx-auto flex flex-col p-6 rounded-lg shadow-lg">
-  <div class="card-title justify-center text-3xl text-primary">Sign up</div>
-  <div class="card-body w-full">
-    <form #registerForm="ngForm" class="flex flex-col gap-4 w-full" (ngSubmit)="register()">
-      <input type="text" class="input w-full" name="email" [(ngModel)]="creds.email" placeholder="email">
-      <input type="text" class="input w-full" name="displayName" [(ngModel)]="creds.displayName" placeholder="display name">
-      <input type="password" class="input w-full" name="password" [(ngModel)]="creds.password " placeholder="password">
-      <div class="flex items-center justify-end gap-3">
-        <button (click)="cancel()" type="button" class="btn">Cancel</button>
-        <button class="btn-primary" type="submit">Register</button>
-      </div>
-    </form>
+<div class="max-w-2xl mx-auto p-8 mt-10 bg-[#242424] rounded-2xl shadow-2xl border border-gray-800">
+  <div class="mb-8 text-center">
+     <h2 class="text-3xl font-extrabold text-white">Sign up</h2>
+     <p class="text-gray-400 mt-2">Create your account to start bidding and selling.</p>
   </div>
+
+  <form #registerForm="ngForm" class="flex flex-col gap-6 w-full" (ngSubmit)="register()">
+     <!-- Email -->
+     <div>
+       <label class="block text-sm font-medium text-gray-300 mb-2" for="email">Email</label>
+       <input 
+         type="email" 
+         id="email" 
+         class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+         name="email" 
+         [(ngModel)]="creds.email" 
+         placeholder="email@example.com" 
+         required
+       >
+     </div>
+
+     <!-- Display Name -->
+     <div>
+       <label class="block text-sm font-medium text-gray-300 mb-2" for="displayName">Display Name</label>
+       <input 
+         type="text" 
+         id="displayName" 
+         class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+         name="displayName" 
+         [(ngModel)]="creds.displayName" 
+         placeholder="Choose a display name" 
+         required
+       >
+     </div>
+
+     <!-- Password -->
+     <div>
+       <label class="block text-sm font-medium text-gray-300 mb-2" for="password">Password</label>
+       <input 
+         type="password" 
+         id="password" 
+         class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+         name="password" 
+         [(ngModel)]="creds.password" 
+         placeholder="Enter your password" 
+         required 
+         minlength="4" 
+         maxlength="15"
+       >
+     </div>
+
+     <!-- Date of Birth -->
+     <div>
+       <label class="block text-sm font-medium text-gray-300 mb-2">Date of Birth</label>
+       <div class="grid grid-cols-4 gap-3 w-full">
+         <!-- Month (col-span-2) -->
+         <div class="col-span-2">
+           <select 
+             name="month" 
+             [(ngModel)]="selectedMonth" 
+             (change)="updateDateOfBirth()" 
+             class="select w-full bg-[#1a1a1a] border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+             required
+           >
+             <option value="" disabled selected>Month</option>
+             @for (m of months; track m.value) {
+               <option [value]="m.value">{{m.name}}</option>
+             }
+           </select>
+         </div>
+         <!-- Day (col-span-1) -->
+         <div class="col-span-1">
+           <select 
+             name="day" 
+             [(ngModel)]="selectedDay" 
+             (change)="updateDateOfBirth()" 
+             class="select w-full bg-[#1a1a1a] border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+             required
+           >
+             <option value="" disabled selected>Day</option>
+             @for (d of days; track d) {
+               <option [value]="d">{{d}}</option>
+             }
+           </select>
+         </div>
+         <!-- Year (col-span-1) -->
+         <div class="col-span-1">
+           <select 
+             name="year" 
+             [(ngModel)]="selectedYear" 
+             (change)="updateDateOfBirth()" 
+             class="select w-full bg-[#1a1a1a] border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+             required
+           >
+             <option value="" disabled selected>Year</option>
+             @for (y of years; track y) {
+               <option [value]="y">{{y}}</option>
+             }
+           </select>
+         </div>
+       </div>
+     </div>
+
+     <!-- Actions -->
+     <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-800">
+       <button 
+         (click)="cancel()" 
+         type="button" 
+         class="bg-transparent hover:bg-gray-800 border border-gray-700 text-gray-300 px-6 py-3 rounded-lg font-bold transition-all"
+       >
+         Cancel
+       </button>
+       <button 
+         type="submit" 
+         [disabled]="registerForm.invalid" 
+         class="bg-[#ff4742] hover:bg-[#e63e39] text-white font-bold px-8 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+       >
+         Complete Sign-up
+       </button>
+     </div>
+  </form>
 </div>

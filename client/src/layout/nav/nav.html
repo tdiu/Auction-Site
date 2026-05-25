@@ -1,18 +1,23 @@
 <header class="p-3 w-full fixed top-0 z-50 bg-[#242424] border-b border-gray-800 shadow-lg">
-  <div class="flex align-middle items-center px-10 mx-auto gap-6">
-    <a routerLink="/"
-       class="max-h-16 text-white border-r border-gray-700 pr-6">
-      <h3 class="text-2xl font-semibold text-white uppercase tracking-tight">GWAuction</h3>
-    </a>
-    <nav class="flex gap-4 my-2 uppercase text-sm font-bold text-gray-400">
-      <a routerLink="/auctions" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Auctions</a>
-      @if (accountService.currentUser()) {
-        <a routerLink="/sell" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Sell</a>
-        <a routerLink="/messages" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Messages</a>
-      }
-    </nav>
-    <div class="flex-1 flex justify-center mx-6">
-      <label class="input input-sm bg-[#1a1a1a] border-gray-700 flex items-center gap-2 w-full max-w-md">
+  <div class="flex items-center px-10 mx-auto gap-6 w-full">
+    <!-- Left Section: Logo & Navigation -->
+    <div class="flex-1 flex items-center gap-6">
+      <a routerLink="/"
+         class="max-h-16 text-white border-r border-gray-700 pr-6">
+        <h3 class="text-2xl font-semibold text-white uppercase tracking-tight">GWAuction</h3>
+      </a>
+      <nav class="flex gap-4 my-2 uppercase text-sm font-bold text-gray-400">
+        <a routerLink="/auctions" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Auctions</a>
+        @if (accountService.currentUser()) {
+          <a routerLink="/sell" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Sell</a>
+          <a routerLink="/messages" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Messages</a>
+        }
+      </nav>
+    </div>
+
+    <!-- Center Section: Search Bar -->
+    <div class="flex-none flex justify-center w-full max-w-md mx-6">
+      <label class="input input-sm bg-[#1a1a1a] border-gray-700 flex items-center gap-2 w-full">
         <svg class="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/>
           <path d="m21 21-4.35-4.35"/>
@@ -20,7 +25,9 @@
         <input type="search" class="grow bg-transparent text-white placeholder-gray-500 outline-none" placeholder="Search auctions..." />
       </label>
     </div>
-    <div class="flex align-middle gap-3">
+
+    <!-- Right Section: Login/Actions -->
+    <div class="flex-1 flex items-center justify-end gap-3">
       @if (accountService.currentUser(); as user) {
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="flex items-center text-white text-lg gap-3 cursor-pointer hover:opacity-80 transition-opacity">

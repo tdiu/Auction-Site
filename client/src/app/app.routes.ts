@@ -9,9 +9,11 @@ import {NotFound} from '../shared/errors/not-found/not-found';
 import {ServerError} from '../shared/errors/server-error/server-error';
 import {AuctionList} from '../features/auctions/auction-list/auction-list';
 import {AuctionDetailed} from '../features/auctions/auction-detailed/auction-detailed';
+import {Register} from '../features/account/register/register';
 
 export const routes: Routes = [
   {path: '', component: Home},
+  {path: 'register', component: Register},
   {
     path: '',
     runGuardsAndResolvers: 'always',

@@ -13,4 +13,7 @@ public class RegisterDto
     [Required]
     [MinLength(4), MaxLength(15)]
     public string Password { get; set; } = "";
+
+    [Required]
+    public DateOnly DateOfBirth { get; set; }
 }

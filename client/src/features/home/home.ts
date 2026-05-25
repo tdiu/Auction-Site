@@ -7,17 +7,11 @@ import {RouterLink} from '@angular/router';
 @Component({
   selector: 'app-home',
   imports: [
-    Register,
     RouterLink
   ],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
 export class Home {
-  protected registerMode = signal(false);
   protected accountService = inject(AccountService);
-
-  showRegister(value: boolean) {
-    this.registerMode.set(value);
-  }
 }

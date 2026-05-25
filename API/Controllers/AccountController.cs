@@ -23,6 +23,7 @@ public class AccountController(UserManager<AppUser> userManager, iTokenService t
             DisplayName = registerDto.DisplayName,
             UserName = registerDto.DisplayName,
             Email = registerDto.Email,
+            DateOfBirth = registerDto.DateOfBirth
         };
         
         var res = await userManager.CreateAsync(user, registerDto.Password);

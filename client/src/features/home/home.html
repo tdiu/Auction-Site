@@ -1,5 +1,4 @@
 <div class="hero min-h-screen bg-[#1a1a1a] text-gray-200">
-  @if (!registerMode()) {
     @if (accountService.currentUser()) {
       <div class="hero-content text-center">
         <div class="flex flex-col items-center max-w-lg">
@@ -35,7 +34,7 @@
             Ready to start your journey?
           </p>
           <div class="flex items-center gap-4 mt-4">
-            <button (click)="showRegister(true)" class="btn btn-lg bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-12 shadow-lg shadow-red-900/20">
+            <button routerLink="/register" class="btn btn-lg bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-12 shadow-lg shadow-red-900/20">
               Register Now
             </button>
             <button class="btn btn-lg bg-[#242424] border border-gray-700 hover:bg-gray-800 text-white normal-case px-12 shadow-lg">
@@ -45,11 +44,4 @@
         </div>
       </div>
     }
-  } @else {
-    <div class="w-full max-w-xl mx-auto p-8 bg-[#242424] rounded-2xl border border-gray-800 shadow-2xl">
-      <app-register class="w-full"
-                    (cancelRegister)="showRegister($event)">
-      </app-register>
-    </div>
-  }
 </div>
