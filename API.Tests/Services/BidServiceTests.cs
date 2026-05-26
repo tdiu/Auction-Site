@@ -37,7 +37,6 @@ public class BidServiceTests
         var auction = new Auction
         {
             AuctionId = 1,
-            Status = AuctionStatus.Active,
             StartingPrice = 100m,
             CurrentHighBid = null,
             CurrentHighBidderId = null,
@@ -80,7 +79,6 @@ public class BidServiceTests
         var auction = new Auction
         {
             AuctionId = 1,
-            Status = AuctionStatus.Active,
             StartingPrice = 100m,
             EndTime = DateTimeOffset.UtcNow.AddHours(-1),
             SellerId = "seller-guid",
@@ -101,7 +99,6 @@ public class BidServiceTests
         var auction = new Auction
         {
             AuctionId = 1,
-            Status = AuctionStatus.Active,
             StartingPrice = 100m,
             CurrentHighBid = 150m,
             CurrentHighBidderId = "bidder-guid",
@@ -124,7 +121,6 @@ public class BidServiceTests
         var auction = new Auction
         {
             AuctionId = 1,
-            Status = AuctionStatus.Active,
             StartingPrice = 100m,
             CurrentHighBid = null,
             CurrentHighBidderId = null,
@@ -147,7 +143,6 @@ public class BidServiceTests
         var auction = new Auction
         {
             AuctionId = 1,
-            Status = AuctionStatus.Active,
             StartingPrice = 100m,
             CurrentHighBid = 150m,
             CurrentHighBidderId = "other-bidder",
@@ -170,7 +165,6 @@ public class BidServiceTests
         var auction = new Auction
         {
             AuctionId = 1,
-            Status = AuctionStatus.Active,
             StartingPrice = 100m,
             BuyNowPrice = 500m,
             CurrentHighBid = null,
@@ -190,7 +184,7 @@ public class BidServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(500m, result.Value!.BidAmount);
-        Assert.Equal(AuctionStatus.Ended, auction.Status);
+        Assert.True(auction.EndTime <= DateTimeOffset.UtcNow, "Buy now should clamp EndTime to now");
     }
 
     [Fact]

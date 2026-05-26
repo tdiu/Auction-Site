@@ -27,14 +27,5 @@ public class AuctionRepository(AppDbContext context) : IAuctionRepository
         return auction;
     }
 
-    public async Task<int> UpdateAuctionStatusesAsync()
-    {
-        var now = DateTimeOffset.UtcNow;
-        return await context.Auctions
-            .Where(a => a.EndTime <= now && a.Status == AuctionStatus.Active)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(a => a.Status, a => a.CurrentHighBid == null
-                        ? AuctionStatus.Expired
-                        : AuctionStatus.Ended));
-    }
+
 }

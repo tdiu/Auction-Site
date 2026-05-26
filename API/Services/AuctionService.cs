@@ -14,11 +14,18 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
     public async Task<IReadOnlyList<AuctionResponseDto>> GetAllAuctions(string? displayName, string? searchTerm, AuctionStatus? status)
     {
         var query = auctionRepository.GetAuctionsQueryable();
+        var now = DateTimeOffset.UtcNow;
 
         // Default to Active if no status is specified
         var filterStatus = status ?? AuctionStatus.Active;
 
-        query = query.Where(a => a.Status == filterStatus);
+        query = filterStatus switch
+        {
+            AuctionStatus.Active => query.Where(a => a.EndTime > now),
+            AuctionStatus.Expired => query.Where(a => a.EndTime <= now && a.CurrentHighBid == null),
+            AuctionStatus.Ended => query.Where(a => a.EndTime <= now && a.CurrentHighBid != null),
+            _ => query.Where(a => a.EndTime > now)
+        };
 
         // Filter by queries
         if (!string.IsNullOrEmpty(displayName))
@@ -29,13 +36,13 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
         {
             query = query.Where(a => a.ItemName.ToLower().Contains(searchTerm.ToLower()));
         }
-        return await query.ProjectToDto().ToListAsync();
+        return await query.ProjectToDto(now).ToListAsync();
     }
 
     public async Task<Result<AuctionResponseDto>> GetAuctionById(int id)
     {
         var auction = await auctionRepository.GetAuctionAsync(id);
-        return auction == null ? Result<AuctionResponseDto>.Failure("Auction not found") : Result<AuctionResponseDto>.Success(auction.ToDto());
+        return auction == null ? Result<AuctionResponseDto>.Failure("Auction not found") : Result<AuctionResponseDto>.Success(auction.ToDto(DateTimeOffset.UtcNow));
     }
 
     public async Task<Result<AuctionResponseDto>> CreateAuction(AuctionRequestDto auctionRequestDto, string userId)
@@ -54,11 +61,10 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
             SellerId = userId,
             StartTime = currTime,
             EndTime = currTime.AddDays(7),
-            Status = AuctionStatus.Active,
         };
 
         await auctionRepository.CreateAuctionAsync(auction);
         var response = await auctionRepository.GetAuctionAsync(auction.AuctionId);
-        return response == null ? Result<AuctionResponseDto>.Failure("Not Found") : Result<AuctionResponseDto>.Success(response.ToDto());
+        return response == null ? Result<AuctionResponseDto>.Failure("Not Found") : Result<AuctionResponseDto>.Success(response.ToDto(DateTimeOffset.UtcNow));
     }
 }

@@ -6,7 +6,7 @@ namespace API.Extensions;
 
 public static class AuctionExtensions
 {
-    public static IQueryable<AuctionResponseDto> ProjectToDto(this IQueryable<Auction> query)
+    public static IQueryable<AuctionResponseDto> ProjectToDto(this IQueryable<Auction> query, DateTimeOffset now)
     {
         return query.Select(a => new AuctionResponseDto
         {
@@ -21,12 +21,14 @@ public static class AuctionExtensions
             EndTime = a.EndTime,
             CurrentHighBid = a.CurrentHighBid,
             CurrentHighBidderId = a.CurrentHighBidderId,
-            Status = a.Status,
+            Status = a.EndTime <= now
+                ? (a.CurrentHighBid == null ? AuctionStatus.Expired : AuctionStatus.Ended)
+                : AuctionStatus.Active,
         });
 
     }
 
-    public static AuctionResponseDto ToDto(this Auction a)
+    public static AuctionResponseDto ToDto(this Auction a, DateTimeOffset now)
     {
         return new AuctionResponseDto
         {
@@ -41,7 +43,9 @@ public static class AuctionExtensions
             EndTime = a.EndTime,
             CurrentHighBid = a.CurrentHighBid,
             CurrentHighBidderId = a.CurrentHighBidderId,
-            Status = a.Status,
+            Status = a.EndTime <= now
+                ? (a.CurrentHighBid == null ? AuctionStatus.Expired : AuctionStatus.Ended)
+                : AuctionStatus.Active,
         };
     }
 }

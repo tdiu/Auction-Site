@@ -26,7 +26,7 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         var auction = await unitOfWork.Auctions.GetAuctionAsync(auctionId);
         if (auction == null) return Result<BidResponseDto>.Failure("Auction not found");
 
-        if (auction.Status != AuctionStatus.Active || auction.EndTime < DateTimeOffset.UtcNow)
+        if (auction.EndTime < DateTimeOffset.UtcNow)
             return Result<BidResponseDto>.Failure("This auction has already ended");
 
         if (auction.CurrentHighBidderId == userId)
@@ -41,9 +41,7 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         //
         if (auction.BuyNowPrice.HasValue && amount >= auction.BuyNowPrice)
         {
-            auction.Status = AuctionStatus.Ended;
             amount = auction.BuyNowPrice.Value;
-            auction.Status = AuctionStatus.Ended;
             auction.EndTime = currTime;
         }
 
@@ -59,8 +57,15 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         auction.CurrentHighBid = amount;
         auction.CurrentHighBidderId = userId;
 
-        var success = await unitOfWork.CompleteAsync();
-        if (!success) return Result<BidResponseDto>.Failure("Failed to save bid");
+        try
+        {
+            var success = await unitOfWork.CompleteAsync();
+            if (!success) return Result<BidResponseDto>.Failure("Failed to save bid");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<BidResponseDto>.Failure("Auction has been updated. Please refresh and try again");
+        }
 
         // Populate the bidder to avoid NullRef in ToDto
         newBid.Bidder = (await unitOfWork.Users.GetUserByIdAsync(userId))!;
