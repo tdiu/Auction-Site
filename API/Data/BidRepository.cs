@@ -11,10 +11,10 @@ public class BidRepository(AppDbContext context) : IBidRepository
     {
         return context.Bids;
     }
-    
-    public void  Add(Bid bid)
+
+    public void Add(Bid bid)
     {
         context.Bids.Add(bid);
     }
-    
+
 }

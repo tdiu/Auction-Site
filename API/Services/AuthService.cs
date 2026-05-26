@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API.Services;
 
-public class AuthService(UserManager<AppUser> userManager, iTokenService tokenService) : IAuthService
+public class AuthService(UserManager<AppUser> userManager, ITokenService tokenService) : IAuthService
 {
     public async Task<Result<UserDto>> RegisterAsync(RegisterDto registerDto)
     {

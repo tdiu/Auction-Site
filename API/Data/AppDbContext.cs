@@ -9,7 +9,7 @@ namespace API.Data;
 public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>(options)
 {
     public DbSet<Auction> Auctions { get; set; }
-    
+
     public DbSet<Bid> Bids { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -54,7 +54,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             var dateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTimeOffset, string>(
                 v => v.ToString("O"),
                 v => DateTimeOffset.Parse(v));
-                
+
             var nullableDateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTimeOffset?, string?>(
                 v => v.HasValue ? v.Value.ToString("O") : null,
                 v => v == null ? null : DateTimeOffset.Parse(v));

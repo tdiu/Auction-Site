@@ -22,9 +22,9 @@ public class AuctionRepository(AppDbContext context) : IAuctionRepository
 
     public async Task<Auction> CreateAuctionAsync(Auction auction)
     {
-         context.Add(auction);
-         await context.SaveChangesAsync();
-         return auction;
+        context.Add(auction);
+        await context.SaveChangesAsync();
+        return auction;
     }
 
     public async Task<int> UpdateAuctionStatusesAsync()
@@ -33,8 +33,8 @@ public class AuctionRepository(AppDbContext context) : IAuctionRepository
         return await context.Auctions
             .Where(a => a.EndTime <= now && a.Status == AuctionStatus.Active)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(a => a.Status, a => a.CurrentHighBid == null 
-                        ? AuctionStatus.Expired 
+                .SetProperty(a => a.Status, a => a.CurrentHighBid == null
+                        ? AuctionStatus.Expired
                         : AuctionStatus.Ended));
     }
 }

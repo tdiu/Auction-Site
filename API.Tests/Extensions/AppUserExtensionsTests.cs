@@ -11,7 +11,7 @@ public class AppUserExtensionsTests
     [Fact]
     public void ToDto_MapsAllAppUserFieldsToUserDto()
     {
-        var tokenService = Substitute.For<iTokenService>();
+        var tokenService = Substitute.For<ITokenService>();
         tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
 
         var user = new AppUser
@@ -34,7 +34,7 @@ public class AppUserExtensionsTests
     [Fact]
     public void ToDto_CallsTokenServiceWithCorrectUser()
     {
-        var tokenService = Substitute.For<iTokenService>();
+        var tokenService = Substitute.For<ITokenService>();
         tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
 
         var user = new AppUser { Id = "user-id", DisplayName = "TestUser", Email = "test@test.com" };
@@ -47,7 +47,7 @@ public class AppUserExtensionsTests
     [Fact]
     public void ToDto_WithNullImageUrl_ReturnsNullImageUrl()
     {
-        var tokenService = Substitute.For<iTokenService>();
+        var tokenService = Substitute.For<ITokenService>();
         tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
 
         var user = new AppUser { Id = "user-id", DisplayName = "TestUser", Email = "test@test.com", ImageUrl = null };

@@ -9,11 +9,11 @@ public class Bid
     public required DateTimeOffset BidDate { get; set; }
     public required int AuctionId { get; set; }
     public required string BidderId { get; set; }
-    
+
     // nav prop
     [ForeignKey(nameof(AuctionId))]
     public Auction Auction { get; set; } = null!;
 
-    [ForeignKey(nameof(BidderId))] 
+    [ForeignKey(nameof(BidderId))]
     public AppUser Bidder { get; set; } = null!;
 }

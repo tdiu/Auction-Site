@@ -4,10 +4,10 @@ namespace API.DTOs;
 
 public class RegisterDto
 {
-    [Required] 
+    [Required]
     public string DisplayName { get; set; } = "";
 
-    [Required] 
+    [Required]
     public string Email { get; set; } = "";
 
     [Required]

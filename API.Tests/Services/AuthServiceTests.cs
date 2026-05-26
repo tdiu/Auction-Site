@@ -13,9 +13,9 @@ namespace API.Tests.Services;
 
 public class AuthServiceTests
 {
-    private async Task<(AuthService sut, UserManager<AppUser> userManager, AppDbContext db, iTokenService tokenService)> CreateContext()
+    private async Task<(AuthService sut, UserManager<AppUser> userManager, AppDbContext db, ITokenService tokenService)> CreateContext()
     {
-        var tokenService = Substitute.For<iTokenService>();
+        var tokenService = Substitute.For<ITokenService>();
         tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
 
         var services = new ServiceCollection();

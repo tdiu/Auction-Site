@@ -19,6 +19,7 @@ jobs:
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - run: dotnet restore AuctionSite.slnx
+      - run: dotnet format AuctionSite.slnx --verify-no-changes --no-restore
       - run: dotnet build AuctionSite.slnx --no-restore
       - run: dotnet test AuctionSite.slnx --no-build
         

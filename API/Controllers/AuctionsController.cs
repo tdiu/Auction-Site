@@ -11,7 +11,7 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions(
-        [FromQuery] string? displayName, 
+        [FromQuery] string? displayName,
         [FromQuery] string? searchTerm,
         [FromQuery] AuctionStatus? status)
     {
@@ -24,7 +24,7 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
     {
         var auction = await auctionService.GetAuctionById(id);
         if (!auction.IsSuccess) return NotFound();
-        
+
         return Ok(auction.Value);
     }
 
@@ -34,7 +34,7 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
-        
+
         var res = await auctionService.CreateAuction(auctionRequestDto, userId);
         if (!res.IsSuccess) return BadRequest(res.Error);
         return Ok(res.Value);

@@ -10,7 +10,7 @@ public class AuctionResponseDto
     [Required] public string ItemName { get; set; } = "";
     [Required] public decimal StartingPrice { get; set; } = 0;
     public decimal? BuyNowPrice { get; set; }
-    public decimal? CurrentHighBid  { get; set; }
+    public decimal? CurrentHighBid { get; set; }
     public string? CurrentHighBidderId { get; set; }
     [Required]
     public string SellerId { get; set; } = "";
@@ -19,6 +19,6 @@ public class AuctionResponseDto
     public DateTimeOffset SellerCreatedAt { get; set; }
     public DateTimeOffset StartTime { get; set; }
     public DateTimeOffset EndTime { get; set; }
-    
+
     public AuctionStatus Status { get; set; }
 }

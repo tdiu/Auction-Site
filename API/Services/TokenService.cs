@@ -7,7 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace API.Services;
 
-public class TokenService(IConfiguration config) : iTokenService
+public class TokenService(IConfiguration config) : ITokenService
 {
     public string CreateToken(AppUser user)
     {
@@ -35,5 +35,5 @@ public class TokenService(IConfiguration config) : iTokenService
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
-    
+
 }

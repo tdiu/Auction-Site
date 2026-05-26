@@ -16,10 +16,10 @@ public class Auction
     public string? CurrentHighBidderId { get; set; }
 
     public AuctionStatus Status { get; set; }
-    
+
     // navigation props
     [ForeignKey(nameof(SellerId))]
     public AppUser Seller { get; set; } = null!;
-    
-    
+
+
 }

@@ -6,5 +6,5 @@ namespace API.Controllers;
 [ApiController]
 public class BaseApiController : Controller
 {
-  
+
 }
