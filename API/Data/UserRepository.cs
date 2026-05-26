@@ -48,7 +48,7 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
     public async Task<bool> EmailExists(string email)
     {
-        return await context.Users.AnyAsync(x => x.Email.ToLower() == email.ToLower());
+        return await context.Users.AnyAsync(x => x.Email != null && x.Email.ToLower() == email.ToLower());
     }
 
     public async Task<bool> DisplayNameExists(string displayName)

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers;
 
 
-public class BidController (IAuctionService auctionService, IBidService bidService) : BaseApiController
+public class BidController (IBidService bidService) : BaseApiController
 {
    [HttpGet("/api/auctions/{auctionId}/bids")]
    public async Task<IActionResult> GetBids(int auctionId)
