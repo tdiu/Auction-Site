@@ -1,0 +1,39 @@
+name: CI (Test and Build)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    
+jobs:
+  api:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - uses: actions/setup-dotnet@v5
+        with: 
+          dotnet-version: '10.0.x'
+          cache: true
+      - run: dotnet restore AuctionSite.slnx
+      - run: dotnet build AuctionSite.slnx --no-restore
+      - run: dotnet test AuctionSite.slnx --no-build
+        
+  client:
+    name: Frontend (Angular)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: 
+          node-version: '22.x'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm test -- --watch=false
+      - run: npm run build -- --configuration production
