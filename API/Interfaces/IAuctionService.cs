@@ -7,7 +7,7 @@ namespace API.Interfaces;
 
 public interface IAuctionService
 {
-    public Task<PagedList<AuctionResponseDto>> GetAllAuctions(
+    Task<PagedList<AuctionResponseDto>> GetAllAuctions(
         string? displayName,
         string? searchTerm,
         AuctionStatus? status,
