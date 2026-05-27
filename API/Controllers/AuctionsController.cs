@@ -13,9 +13,13 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
     public async Task<ActionResult<IReadOnlyList<AuctionResponseDto>>> GetAllAuctions(
         [FromQuery] string? displayName,
         [FromQuery] string? searchTerm,
-        [FromQuery] AuctionStatus? status)
+        [FromQuery] AuctionStatus? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10
+        )
     {
-        var auctions = await auctionService.GetAllAuctions(displayName, searchTerm, status);
+        var auctions = await auctionService
+            .GetAllAuctions(displayName, searchTerm, status, page, pageSize);
         return Ok(auctions);
     }
 

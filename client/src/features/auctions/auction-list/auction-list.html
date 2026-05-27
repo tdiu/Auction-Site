@@ -1,24 +1,24 @@
 <div class="max-w-[1400px] mx-auto p-6">
-  
+
   <!-- Filter Controls -->
   <div class="flex justify-center mb-8">
     <div class="bg-[#242424] p-1 rounded-xl border border-gray-800 flex gap-1">
       @let currentStatus = (status$ | async);
-      <button (click)="setStatus('Active')" 
+      <button (click)="setStatus('Active')"
               [class.bg-[#ff4742]]="currentStatus === 'Active'"
               [class.text-white]="currentStatus === 'Active'"
               [class.text-gray-400]="currentStatus !== 'Active'"
               class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
         Active
       </button>
-      <button (click)="setStatus('Ended')" 
+      <button (click)="setStatus('Ended')"
               [class.bg-[#ff4742]]="currentStatus === 'Ended'"
               [class.text-white]="currentStatus === 'Ended'"
               [class.text-gray-400]="currentStatus !== 'Ended'"
               class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
         Ended
       </button>
-      <button (click)="setStatus('Expired')" 
+      <button (click)="setStatus('Expired')"
               [class.bg-[#ff4742]]="currentStatus === 'Expired'"
               [class.text-white]="currentStatus === 'Expired'"
               [class.text-gray-400]="currentStatus !== 'Expired'"
@@ -28,13 +28,44 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-5 gap-6">
-    @for (auction of auctions$ | async; track auction.auctionId) {
-      <app-auction-card [auction]="auction"></app-auction-card>
-    } @empty {
-      <div class="col-span-5 py-20 text-center">
-        <p class="text-gray-500 uppercase tracking-[0.3em] text-sm">No auctions found for this category</p>
-      </div>
-    }
-  </div>
+  <!-- Auction Grid -->
+  @let response = (response$ | async);
+  @if (response) {
+    <div class="grid grid-cols-5 gap-6">
+      @for (auction of response.items; track auction.auctionId) {
+        <app-auction-card [auction]="auction"></app-auction-card>
+      } @empty {
+        <div class="col-span-5 py-20 text-center">
+          <p class="text-gray-500 uppercase tracking-[0.3em] text-sm">
+            No auctions found for this category
+          </p>
+        </div>
+      }
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="flex justify-center items-center gap-4 mt-8">
+      <button (click)="goToPage(response.page - 1)"
+              [disabled]="!response.hasPreviousPage"
+              class="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest
+                     transition-all disabled:opacity-30 disabled:cursor-not-allowed
+                     enabled:hover:bg-[#ff4742] enabled:hover:text-white
+                     text-gray-400 border border-gray-800">
+        Previous
+      </button>
+
+      <span class="text-gray-400 text-sm">
+        Page {{ response.page }} of {{ response.totalPages }}
+      </span>
+
+      <button (click)="goToPage(response.page + 1)"
+              [disabled]="!response.hasNextPage"
+              class="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest
+                     transition-all disabled:opacity-30 disabled:cursor-not-allowed
+                     enabled:hover:bg-[#ff4742] enabled:hover:text-white
+                     text-gray-400 border border-gray-800">
+        Next
+      </button>
+    </div>
+  }
 </div>

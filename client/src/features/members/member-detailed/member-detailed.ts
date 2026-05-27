@@ -2,7 +2,7 @@ import {Component, inject} from '@angular/core';
 import {MemberService} from '../../../core/services/member-service';
 import {ActivatedRoute, RouterLink, RouterLinkActive} from '@angular/router';
 import {AsyncPipe, DatePipe} from '@angular/common';
-import {async, Observable, switchMap} from 'rxjs';
+import {async, map, Observable, switchMap} from 'rxjs';
 import {Member} from '../../../types/member';
 import {AuctionService} from '../../../core/services/auction-service';
 import {AuctionCard} from '../../auctions/auction-card/auction-card';
@@ -23,7 +23,8 @@ export class MemberDetailed {
   );
 
   protected auctions$ = this.route.paramMap.pipe(
-    switchMap(params => this.auctionService.getAuctions(params.get('displayName')!))
+    switchMap(params => this.auctionService.getAuctions(params.get('displayName')!)),
+    map(response => response.items)
   );
   protected readonly async = async;
 }

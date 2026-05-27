@@ -4,6 +4,7 @@ using API.DTOs;
 using API.Entities;
 using API.Extensions;
 using API.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services;
@@ -25,6 +26,9 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
     {
         var auction = await unitOfWork.Auctions.GetAuctionAsync(auctionId);
         if (auction == null) return Result<BidResponseDto>.Failure("Auction not found");
+
+        if (auction.SellerId == userId)
+            return Result<BidResponseDto>.Failure("You cannot bid on your own auction");
 
         if (auction.EndTime < DateTimeOffset.UtcNow)
             return Result<BidResponseDto>.Failure("This auction has already ended");

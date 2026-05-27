@@ -11,7 +11,12 @@ namespace API.Services;
 
 public class AuctionService(IAuctionRepository auctionRepository) : IAuctionService
 {
-    public async Task<IReadOnlyList<AuctionResponseDto>> GetAllAuctions(string? displayName, string? searchTerm, AuctionStatus? status)
+    public async Task<PagedList<AuctionResponseDto>> GetAllAuctions(
+        string? displayName,
+        string? searchTerm,
+        AuctionStatus? status,
+        int page,
+        int pageSize)
     {
         var query = auctionRepository.GetAuctionsQueryable();
         var now = DateTimeOffset.UtcNow;
@@ -36,7 +41,10 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
         {
             query = query.Where(a => a.ItemName.ToLower().Contains(searchTerm.ToLower()));
         }
-        return await query.ProjectToDto(now).ToListAsync();
+
+        // TODO: Add sort options
+        query = query.OrderByDescending(a => a.StartTime);
+        return await PagedList<AuctionResponseDto>.CreateAsync(query.ProjectToDto(now), page, pageSize);
     }
 
     public async Task<Result<AuctionResponseDto>> GetAuctionById(int id)
