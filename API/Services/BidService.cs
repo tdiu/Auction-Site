@@ -25,24 +25,21 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
     public async Task<Result<BidResponseDto>> PlaceBid(BidRequestDto bidRequestDto, int auctionId, string userId)
     {
         var auction = await unitOfWork.Auctions.GetAuctionAsync(auctionId);
-        if (auction == null) return Result<BidResponseDto>.Failure("Auction not found");
+        var amount = bidRequestDto.Amount;
 
+        if (auction == null)
+            return Result<BidResponseDto>.Failure("Auction not found");
         if (auction.SellerId == userId)
             return Result<BidResponseDto>.Failure("You cannot bid on your own auction");
-
         if (auction.EndTime < DateTimeOffset.UtcNow)
             return Result<BidResponseDto>.Failure("This auction has already ended");
-
         if (auction.CurrentHighBidderId == userId)
             return Result<BidResponseDto>.Failure("You are already the highest bidder");
-
-        var amount = bidRequestDto.Amount;
         if (amount <= (auction.CurrentHighBid ?? auction.StartingPrice))
             return Result<BidResponseDto>.Failure("Bid is too low");
 
         var currTime = DateTimeOffset.UtcNow;
 
-        //
         if (auction.BuyNowPrice.HasValue && amount >= auction.BuyNowPrice)
         {
             amount = auction.BuyNowPrice.Value;

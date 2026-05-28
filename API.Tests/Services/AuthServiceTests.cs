@@ -65,6 +65,45 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task RegisterAsync_TrimsDisplayNameAndEmailBeforePersisting()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var result = await sut.RegisterAsync(new RegisterDto
+        {
+            DisplayName = "  newuser  ",
+            Email = "  new@test.com  ",
+            Password = "Pass123"
+        });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("newuser", result.Value!.DisplayName);
+        Assert.Equal("new@test.com", result.Value.Email);
+
+        var persisted = await userManager.FindByEmailAsync("new@test.com");
+        Assert.NotNull(persisted);
+        Assert.Equal("newuser", persisted!.DisplayName);
+        Assert.Equal("newuser", persisted.UserName);
+        Assert.Equal("new@test.com", persisted.Email);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithWhitespaceDisplayName_ReturnsFailure()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var result = await sut.RegisterAsync(new RegisterDto
+        {
+            DisplayName = "   ",
+            Email = "new@test.com",
+            Password = "Pass123"
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Username is required", result.Error);
+    }
+
+    [Fact]
     public async Task RegisterAsync_WithDuplicateDisplayName_ReturnsFailure()
     {
         var (sut, userManager, db, tokenService) = await CreateContext();
@@ -75,6 +114,25 @@ public class AuthServiceTests
         var result = await sut.RegisterAsync(new RegisterDto
         {
             DisplayName = "dupe",
+            Email = "second@test.com",
+            Password = "Pass123"
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Username already exists", result.Error);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithDuplicateDisplayNameAfterTrim_ReturnsFailure()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var existing = new AppUser { DisplayName = "dupe", UserName = "dupe", Email = "first@test.com" };
+        await userManager.CreateAsync(existing, "Pass123");
+
+        var result = await sut.RegisterAsync(new RegisterDto
+        {
+            DisplayName = "  dupe  ",
             Email = "second@test.com",
             Password = "Pass123"
         });
@@ -134,6 +192,20 @@ public class AuthServiceTests
         Assert.Equal("test-token", result.Value!.Token);
 
         tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "loginuser"));
+    }
+
+    [Fact]
+    public async Task LoginAsync_TrimsEmailBeforeLookup()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var user = new AppUser { DisplayName = "loginuser", UserName = "loginuser", Email = "login@test.com" };
+        await userManager.CreateAsync(user, "Pass123");
+
+        var result = await sut.LoginAsync(new LoginDto { Email = "  login@test.com  ", Password = "Pass123" });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("login@test.com", result.Value!.Email);
     }
 
     [Fact]

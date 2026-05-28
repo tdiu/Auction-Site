@@ -55,6 +55,12 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
 
     public async Task<Result<AuctionResponseDto>> CreateAuction(AuctionRequestDto auctionRequestDto, string userId)
     {
+        var itemName = auctionRequestDto.ItemName.Trim();
+        if (string.IsNullOrEmpty(itemName))
+        {
+            return Result<AuctionResponseDto>.Failure("Item name is required");
+        }
+
         if (auctionRequestDto.BuyNowPrice.HasValue && auctionRequestDto.BuyNowPrice.Value < auctionRequestDto.StartingPrice)
         {
             return Result<AuctionResponseDto>.Failure("Buy Now Price cannot be set below starting price");
@@ -63,7 +69,7 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
         var currTime = DateTimeOffset.UtcNow;
         var auction = new Auction()
         {
-            ItemName = auctionRequestDto.ItemName,
+            ItemName = itemName,
             StartingPrice = auctionRequestDto.StartingPrice,
             BuyNowPrice = auctionRequestDto.BuyNowPrice,
             SellerId = userId,
