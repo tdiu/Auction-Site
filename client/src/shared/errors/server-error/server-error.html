@@ -5,9 +5,11 @@
   </svg>
 
   <h1 class="card-title text-4xl justify-center">Server Error</h1>
-  <p class="card-body text-xl text-center">{{error.message}}</p>
+  <p class="card-body text-xl text-center">{{error.detail || error.title || 'An unexpected error occurred'}}</p>
+  @if (error.stackTrace) {
   <button class="btn btn-primary" (click)="detailsToggle()">Details</button>
+  }
   @if (showDetails) {
-    <div>{{error.details}}</div>
+    <pre class="text-xs overflow-auto max-h-96">{{error.stackTrace}}</pre>
   }
 </div>

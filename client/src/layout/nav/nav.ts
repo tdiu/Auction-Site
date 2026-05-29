@@ -2,6 +2,7 @@ import {Component, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {AccountService} from '../../core/services/account-service';
 import {Router, RouterLink, RouterLinkActive} from '@angular/router';
+import {getApiErrorMessage} from '../../types/error';
 import {ToastService} from '../../core/services/toast-service';
 
 @Component({
@@ -23,7 +24,7 @@ export class Nav {
         this.creds = {};
       },
       error: error => {
-        this.toast.error(error.error || 'Login failed');
+        this.toast.error(getApiErrorMessage(error, 'Login failed'));
       },
     })
   }

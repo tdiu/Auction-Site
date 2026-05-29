@@ -30,9 +30,9 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         if (auction == null)
             return Result<BidResponseDto>.Failure("Auction not found", FailureReason.NotFound);
         if (auction.SellerId == userId)
-            return Result<BidResponseDto>.Failure("You cannot bid on your own auction", FailureReason.Validation);
+            return Result<BidResponseDto>.Failure("You cannot bid on your own auction", FailureReason.Conflict);
         if (auction.EndTime < DateTimeOffset.UtcNow)
-            return Result<BidResponseDto>.Failure("This auction has already ended", FailureReason.Validation);
+            return Result<BidResponseDto>.Failure("This auction has already ended", FailureReason.Conflict);
         if (auction.CurrentHighBidderId == userId)
             return Result<BidResponseDto>.Failure("You are already the highest bidder", FailureReason.Conflict);
         if (amount <= (auction.CurrentHighBid ?? auction.StartingPrice))

@@ -9,13 +9,15 @@ public class BaseApiController : Controller
 {
     protected ActionResult HandleFailure<T>(Result<T> result)
     {
-        return result.Reason switch
+        var statusCode = result.Reason switch
         {
-            FailureReason.NotFound => NotFound(result.Error),
-            FailureReason.Unauthorized => Unauthorized(result.Error),
-            FailureReason.Conflict => Conflict(result.Error),
-            FailureReason.Validation => BadRequest(result.Error),
-            _ => StatusCode(500, result.Error)
+            FailureReason.NotFound => StatusCodes.Status404NotFound,
+            FailureReason.Unauthorized => StatusCodes.Status401Unauthorized,
+            FailureReason.Conflict => StatusCodes.Status409Conflict,
+            FailureReason.Validation => StatusCodes.Status400BadRequest,
+            _ => StatusCodes.Status500InternalServerError
         };
+
+        return Problem(detail: result.Error, statusCode: statusCode);
     }
 }

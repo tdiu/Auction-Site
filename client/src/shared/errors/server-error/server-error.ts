@@ -1,6 +1,6 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, inject} from '@angular/core';
 import {Router} from '@angular/router';
-import {ApiError} from '../../../types/error';
+import {ProblemDetails} from '../../../types/error';
 
 @Component({
   selector: 'app-server-error',
@@ -9,13 +9,16 @@ import {ApiError} from '../../../types/error';
   styleUrl: './server-error.css',
 })
 export class ServerError {
-  protected error: ApiError;
+  protected error: ProblemDetails = {
+    title: 'Server Error',
+    detail: 'An unexpected error occurred'
+  };
   private router = inject(Router)
   protected showDetails = false;
 
   constructor() {
     const navigation = this.router.getCurrentNavigation();
-    this.error = navigation?.extras?.state?.['error'];
+    this.error = navigation?.extras?.state?.['error'] ?? this.error;
   }
 
   detailsToggle() {

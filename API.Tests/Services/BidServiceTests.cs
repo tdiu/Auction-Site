@@ -91,7 +91,7 @@ public class BidServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("This auction has already ended", result.Error);
-        Assert.Equal(FailureReason.Validation, result.Reason);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class BidServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Bid is too low", result.Error);
-        Assert.Equal(FailureReason.Validation, result.Reason);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class BidServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Bid is too low", result.Error);
-        Assert.Equal(FailureReason.Validation, result.Reason);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
     }
 
     [Fact]

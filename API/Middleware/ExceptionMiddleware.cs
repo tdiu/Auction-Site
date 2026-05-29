@@ -1,11 +1,10 @@
 using System.Net;
-using System.Text.Json;
-using API.Errors;
-using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Mvc;
 
-namespace API.MIddleware;
+namespace API.Middleware;
 
-public class ExceptionMiddleWare(RequestDelegate next, ILogger<ExceptionMiddleWare> logger, IHostEnvironment env)
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger,
+    IHostEnvironment env, IProblemDetailsService problemDetailsService)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -16,20 +15,25 @@ public class ExceptionMiddleWare(RequestDelegate next, ILogger<ExceptionMiddleWa
         catch (Exception ex)
         {
             logger.LogError(ex, "{Message}", ex.Message);
-            context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            var response = env.IsDevelopment()
-                ? new ApiException(context.Response.StatusCode, ex.Message, ex.StackTrace)
-                : new ApiException(context.Response.StatusCode, ex.Message, "Internal Server Error");
-
-            var options = new JsonSerializerOptions
+            var problem = new ProblemDetails
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Status = (int)HttpStatusCode.InternalServerError,
+                Title = "An unexpected error has occurred",
+                Detail = env.IsDevelopment() ? ex.Message : "An internal error has occurred",
             };
 
-            var json = JsonSerializer.Serialize(response, options);
-            await context.Response.WriteAsync(json);
+            if (env.IsDevelopment())
+            {
+                problem.Extensions["stackTrace"] = ex.StackTrace;
+            }
+
+            await problemDetailsService.WriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = context,
+                ProblemDetails = problem
+            });
         }
     }
 }

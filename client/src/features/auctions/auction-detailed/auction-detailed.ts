@@ -7,6 +7,7 @@ import {BidService} from '../../../core/services/bid-service';
 import {ToastService} from '../../../core/services/toast-service';
 
 import {AccountService} from '../../../core/services/account-service';
+import {getApiErrorMessage} from '../../../types/error';
 import {Auction} from '../../../types/auction';
 
 @Component({
@@ -82,7 +83,7 @@ export class AuctionDetailed {
         this.refreshAuction$.next();
       },
       error: error => {
-        this.toastService.error(error.error || 'Failed to place bid');
+        this.toastService.error(getApiErrorMessage(error, 'Failed to place bid'));
       }
     });
   }
