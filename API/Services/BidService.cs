@@ -36,7 +36,7 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         if (auction.CurrentHighBidderId == userId)
             return Result<BidResponseDto>.Failure("You are already the highest bidder", FailureReason.Conflict);
         if (amount <= (auction.CurrentHighBid ?? auction.StartingPrice))
-            return Result<BidResponseDto>.Failure("Bid is too low", FailureReason.Validation);
+            return Result<BidResponseDto>.Failure("Bid is too low", FailureReason.Conflict);
 
         var currTime = DateTimeOffset.UtcNow;
 
