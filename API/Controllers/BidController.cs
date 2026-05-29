@@ -25,7 +25,8 @@ public class BidController(IBidService bidService) : BaseApiController
         if (string.IsNullOrEmpty(user)) return Unauthorized();
 
         var res = await bidService.PlaceBid(bidRequestDto, auctionId, user);
-        if (!res.IsSuccess) return BadRequest(res.Error);
+        if (!res.IsSuccess)
+            return HandleFailure(res);
 
         return Ok(res.Value);
     }

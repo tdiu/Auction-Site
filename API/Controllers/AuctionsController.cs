@@ -27,7 +27,7 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
     public async Task<ActionResult<AuctionResponseDto>> GetAuction(int id)
     {
         var auction = await auctionService.GetAuctionById(id);
-        if (!auction.IsSuccess) return NotFound();
+        if (!auction.IsSuccess) return HandleFailure(auction);
 
         return Ok(auction.Value);
     }
@@ -40,7 +40,8 @@ public class AuctionsController(IAuctionService auctionService) : BaseApiControl
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
         var res = await auctionService.CreateAuction(auctionRequestDto, userId);
-        if (!res.IsSuccess) return BadRequest(res.Error);
+        if (!res.IsSuccess)
+            return HandleFailure(res);
         return Ok(res.Value);
     }
 }

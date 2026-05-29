@@ -50,7 +50,9 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
     public async Task<Result<AuctionResponseDto>> GetAuctionById(int id)
     {
         var auction = await auctionRepository.GetAuctionAsync(id);
-        return auction == null ? Result<AuctionResponseDto>.Failure("Auction not found") : Result<AuctionResponseDto>.Success(auction.ToDto(DateTimeOffset.UtcNow));
+        return auction == null
+            ? Result<AuctionResponseDto>.Failure("Auction not found", FailureReason.NotFound)
+            : Result<AuctionResponseDto>.Success(auction.ToDto(DateTimeOffset.UtcNow));
     }
 
     public async Task<Result<AuctionResponseDto>> CreateAuction(AuctionRequestDto auctionRequestDto, string userId)
@@ -58,12 +60,12 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
         var itemName = auctionRequestDto.ItemName.Trim();
         if (string.IsNullOrEmpty(itemName))
         {
-            return Result<AuctionResponseDto>.Failure("Item name is required");
+            return Result<AuctionResponseDto>.Failure("Item name is required", FailureReason.Validation);
         }
 
         if (auctionRequestDto.BuyNowPrice.HasValue && auctionRequestDto.BuyNowPrice.Value < auctionRequestDto.StartingPrice)
         {
-            return Result<AuctionResponseDto>.Failure("Buy Now Price cannot be set below starting price");
+            return Result<AuctionResponseDto>.Failure("Buy Now Price cannot be set below starting price", FailureReason.Validation);
         }
 
         var currTime = DateTimeOffset.UtcNow;
@@ -79,6 +81,8 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
 
         await auctionRepository.CreateAuctionAsync(auction);
         var response = await auctionRepository.GetAuctionAsync(auction.AuctionId);
-        return response == null ? Result<AuctionResponseDto>.Failure("Not Found") : Result<AuctionResponseDto>.Success(response.ToDto(DateTimeOffset.UtcNow));
+        return response == null
+            ? Result<AuctionResponseDto>.Failure("Auction not found", FailureReason.NotFound)
+            : Result<AuctionResponseDto>.Success(response.ToDto(DateTimeOffset.UtcNow));
     }
 }

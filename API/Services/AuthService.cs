@@ -16,10 +16,10 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         var email = registerDto.Email.Trim();
 
         if (string.IsNullOrEmpty(displayName))
-            return Result<UserDto>.Failure("Username is required");
+            return Result<UserDto>.Failure("Username is required", FailureReason.Validation);
 
         if (await userManager.Users.AnyAsync(x => x.DisplayName == displayName))
-            return Result<UserDto>.Failure("Username already exists");
+            return Result<UserDto>.Failure("Username already exists", FailureReason.Conflict);
 
         var user = new AppUser
         {
@@ -32,7 +32,8 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         var res = await userManager.CreateAsync(user, registerDto.Password);
         if (!res.Succeeded)
             return Result<UserDto>.Failure(
-                string.Join("; ", res.Errors.Select(e => e.Description)));
+                string.Join("; ", res.Errors.Select(e => e.Description)),
+                FailureReason.Validation);
 
         return Result<UserDto>.Success(user.ToDto(tokenService));
     }
@@ -41,10 +42,12 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
     {
         var email = loginDto.Email.Trim();
         var user = await userManager.FindByEmailAsync(email);
-        if (user == null) return Result<UserDto>.Failure("Invalid Email");
+        if (user == null)
+            return Result<UserDto>.Failure("Invalid Credentials", FailureReason.Unauthorized);
 
         var valid = await userManager.CheckPasswordAsync(user, loginDto.Password);
-        if (!valid) return Result<UserDto>.Failure("Invalid Password");
+        if (!valid)
+            return Result<UserDto>.Failure("Invalid Credentials", FailureReason.Unauthorized);
 
         return Result<UserDto>.Success(user.ToDto(tokenService));
     }

@@ -1,3 +1,4 @@
+using API.Core;
 using API.DTOs;
 using API.Entities;
 using API.Interfaces;
@@ -64,6 +65,7 @@ public class AuctionServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Item name is required", result.Error);
+        Assert.Equal(FailureReason.Validation, result.Reason);
 
         await _auctionRepository.DidNotReceive().CreateAuctionAsync(Arg.Any<Auction>());
     }

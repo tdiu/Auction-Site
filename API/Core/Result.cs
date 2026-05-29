@@ -2,10 +2,12 @@ namespace API.Core;
 
 public class Result<T>
 {
-    public bool IsSuccess { get; set; }
-    public T? Value { get; set; }
-    public string? Error { get; set; }
+    public bool IsSuccess { get; init; }
+    public T? Value { get; init; }
+    public string? Error { get; init; }
+    public FailureReason? Reason { get; init; }
 
     public static Result<T> Success(T value) => new() { IsSuccess = true, Value = value };
-    public static Result<T> Failure(string error) => new() { IsSuccess = false, Error = error };
+    public static Result<T> Failure(string error, FailureReason reason) =>
+        new() { IsSuccess = false, Error = error, Reason = reason };
 }

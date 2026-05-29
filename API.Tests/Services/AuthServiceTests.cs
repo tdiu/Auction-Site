@@ -1,3 +1,4 @@
+using API.Core;
 using API.Data;
 using API.DTOs;
 using API.Entities;
@@ -101,6 +102,7 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Username is required", result.Error);
+        Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
     [Fact]
@@ -120,6 +122,7 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Username already exists", result.Error);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
     }
 
     [Fact]
@@ -139,6 +142,7 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Username already exists", result.Error);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
     }
 
     [Fact]
@@ -158,6 +162,7 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("already taken", result.Error);
+        Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
     [Fact]
@@ -174,6 +179,7 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Passwords", result.Error);
+        Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
     [Fact]
@@ -216,7 +222,8 @@ public class AuthServiceTests
         var result = await sut.LoginAsync(new LoginDto { Email = "nobody@test.com", Password = "Pass123" });
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("Invalid Email", result.Error);
+        Assert.Equal("Invalid Credentials", result.Error);
+        Assert.Equal(FailureReason.Unauthorized, result.Reason);
     }
 
     [Fact]
@@ -230,6 +237,7 @@ public class AuthServiceTests
         var result = await sut.LoginAsync(new LoginDto { Email = "login@test.com", Password = "WrongPass1" });
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("Invalid Password", result.Error);
+        Assert.Equal("Invalid Credentials", result.Error);
+        Assert.Equal(FailureReason.Unauthorized, result.Reason);
     }
 }

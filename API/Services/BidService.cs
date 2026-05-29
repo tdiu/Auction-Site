@@ -28,15 +28,15 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         var amount = bidRequestDto.Amount;
 
         if (auction == null)
-            return Result<BidResponseDto>.Failure("Auction not found");
+            return Result<BidResponseDto>.Failure("Auction not found", FailureReason.NotFound);
         if (auction.SellerId == userId)
-            return Result<BidResponseDto>.Failure("You cannot bid on your own auction");
+            return Result<BidResponseDto>.Failure("You cannot bid on your own auction", FailureReason.Validation);
         if (auction.EndTime < DateTimeOffset.UtcNow)
-            return Result<BidResponseDto>.Failure("This auction has already ended");
+            return Result<BidResponseDto>.Failure("This auction has already ended", FailureReason.Validation);
         if (auction.CurrentHighBidderId == userId)
-            return Result<BidResponseDto>.Failure("You are already the highest bidder");
+            return Result<BidResponseDto>.Failure("You are already the highest bidder", FailureReason.Conflict);
         if (amount <= (auction.CurrentHighBid ?? auction.StartingPrice))
-            return Result<BidResponseDto>.Failure("Bid is too low");
+            return Result<BidResponseDto>.Failure("Bid is too low", FailureReason.Validation);
 
         var currTime = DateTimeOffset.UtcNow;
 
@@ -61,11 +61,11 @@ public class BidService(IUnitOfWork unitOfWork) : IBidService
         try
         {
             var success = await unitOfWork.CompleteAsync();
-            if (!success) return Result<BidResponseDto>.Failure("Failed to save bid");
+            if (!success) return Result<BidResponseDto>.Failure("Failed to save bid", FailureReason.InternalError);
         }
         catch (DbUpdateConcurrencyException)
         {
-            return Result<BidResponseDto>.Failure("Auction has been updated. Please refresh and try again");
+            return Result<BidResponseDto>.Failure("Auction has been updated. Please refresh and try again", FailureReason.Conflict);
         }
 
         // Populate the bidder to avoid NullRef in ToDto
