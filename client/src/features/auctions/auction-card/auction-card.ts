@@ -1,8 +1,10 @@
-import {Component, input} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
 import {Auction} from '../../../types/auction';
 import {RouterLink} from '@angular/router';
 import {map, timer} from 'rxjs';
 import {AsyncPipe} from '@angular/common';
+import {Member} from '../../../types/member';
+import {PresenceService} from '../../../core/services/presence-service';
 
 @Component({
   selector: 'app-auction-card',

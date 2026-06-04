@@ -1,5 +1,6 @@
 import {Component, inject} from '@angular/core';
 import {MemberService} from '../../../core/services/member-service';
+import {PresenceService} from '../../../core/services/presence-service';
 import {ActivatedRoute, RouterLink, RouterLinkActive} from '@angular/router';
 import {AsyncPipe, DatePipe} from '@angular/common';
 import {async, map, Observable, switchMap} from 'rxjs';
@@ -17,6 +18,7 @@ export class MemberDetailed {
   private memberService = inject(MemberService);
   private auctionService = inject(AuctionService);
   private route = inject(ActivatedRoute);
+  protected presenceService = inject(PresenceService);
 
   protected member$? = this.route.paramMap.pipe(
     switchMap(params => this.memberService.getMember(params.get('displayName')!))

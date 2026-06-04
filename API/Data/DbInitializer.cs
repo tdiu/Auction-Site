@@ -22,14 +22,14 @@ public static class DbInitializer
                 new AppUser
                 {
                     DisplayName = "Alice",
-                    UserName = "alice@test.com",
+                    UserName = "Alice",
                     Email = "alice@test.com",
                     DateOfBirth = new DateOnly(1990, 1, 1),
                 },
                 new AppUser
                 {
                     DisplayName = "Bob",
-                    UserName = "bob@test.com",
+                    UserName = "Bob",
                     Email = "bob@test.com",
                     DateOfBirth = new DateOnly(1992, 5, 10),
                 }

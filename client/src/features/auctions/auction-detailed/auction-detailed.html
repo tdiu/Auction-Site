@@ -160,10 +160,13 @@
         </div>
 
         <div class="flex items-center gap-4 border-t border-gray-800 pt-6 mb-8">
-          <div class="relative">
+          <div class="relative inline-block">
             <div class="w-12 h-12 rounded-full overflow-hidden border border-gray-700">
               <img src="/user.png" alt="seller" class="w-full h-full object-cover">
             </div>
+            <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2.5px] border-[#242424]"
+                 [class.bg-green-500]="presenceService.onlineUsers().includes(auction.sellerId)"
+                 [class.bg-gray-500]="!presenceService.onlineUsers().includes(auction.sellerId)"></div>
           </div>
           <div class="flex-grow">
             <div class="font-bold text-white text-sm">{{auction.sellerName}}</div>

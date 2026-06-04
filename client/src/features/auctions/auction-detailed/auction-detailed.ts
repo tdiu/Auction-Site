@@ -5,7 +5,7 @@ import {BehaviorSubject, combineLatest, finalize, map, switchMap, timer} from 'r
 import {AsyncPipe, DatePipe} from '@angular/common';
 import {BidService} from '../../../core/services/bid-service';
 import {ToastService} from '../../../core/services/toast-service';
-
+import {PresenceService} from '../../../core/services/presence-service';
 import {AccountService} from '../../../core/services/account-service';
 import {getApiErrorMessage} from '../../../types/error';
 import {Auction} from '../../../types/auction';
@@ -22,6 +22,8 @@ export class AuctionDetailed {
   private toastService = inject(ToastService);
   private route = inject(ActivatedRoute);
   protected accountService = inject(AccountService);
+  protected presenceService = inject(PresenceService);
+
 
   private refreshAuction$ = new BehaviorSubject<void>(undefined);
   showBids = false;

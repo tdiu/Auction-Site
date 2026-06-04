@@ -7,10 +7,13 @@
 
       <!-- Profile Card -->
       <div class="bg-[#242424] rounded-xl p-6 flex flex-col items-center shadow-lg border border-gray-800">
-        <div class="relative">
+        <div class="relative inline-block">
           <div class="w-28 h-28 rounded-full border-4 border-[#333] overflow-hidden">
             <img [src]="member.imageUrl || '/user.png'" alt="profile" class="w-full h-full object-cover">
           </div>
+          <div class="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full border-[3px] border-[#242424]"
+               [class.bg-green-500]="presenceService.onlineUsers().includes(member.id)"
+               [class.bg-gray-500]="!presenceService.onlineUsers().includes(member.id)"></div>
         </div>
 
         <h2 class="text-xl font-bold mt-4">{{member.displayName}}</h2>
