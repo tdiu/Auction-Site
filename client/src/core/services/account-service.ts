@@ -4,14 +4,14 @@ import {LoginCreds, RegisterCreds, User} from '../../types/user';
 import {finalize, tap} from 'rxjs';
 import {environment} from '../../environments/environment';
 import {PresenceService} from './presence-service';
-import {HubConnectionState} from '@microsoft/signalr';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AccountService {
   private http = inject(HttpClient);
-  currentUser = signal<User | null>(null);
+  private readonly currentUserSignal = signal<User | null>(null);
+  readonly currentUser = this.currentUserSignal.asReadonly();
   private presenceService = inject(PresenceService);
 
   private baseUrl = environment.apiUrl;
@@ -62,16 +62,16 @@ export class AccountService {
     )
   }
 
-  setCurrentUser(user: User) {
-    this.currentUser.set(user);
+  private setCurrentUser(user: User) {
+    this.currentUserSignal.set(user);
     this.presenceService.setAccessTokenFactory(() => this.currentUser()?.token);
-    if (this.presenceService.hubConnection?.state !== HubConnectionState.Connected) {
+    if (!this.presenceService.isConnected) {
       this.presenceService.createHubConnection()
     }
   }
 
   clearCurrentUser() {
-    this.currentUser.set(null);
+    this.currentUserSignal.set(null);
     this.presenceService.stopHubConnection();
   }
 }

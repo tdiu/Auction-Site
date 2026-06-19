@@ -9,8 +9,9 @@ import {ToastService} from './toast-service';
 export class PresenceService {
   private hubUrl = environment.hubUrl;
   private toast = inject(ToastService);
-  public hubConnection?: HubConnection;
-  public onlineUsers = signal<string[]>([]);
+  private hubConnection?: HubConnection;
+  private readonly onlineUsersSignal = signal<string[]>([]);
+  readonly onlineUsers = this.onlineUsersSignal.asReadonly();
   private accessTokenFactory?: () => string | undefined;
 
   createHubConnection() {
@@ -24,15 +25,15 @@ export class PresenceService {
       .build();
 
     this.hubConnection.on('UserOnline', userId => {
-      this.onlineUsers.update(users => users.includes(userId) ? users : [...users, userId]);
+      this.onlineUsersSignal.update(users => users.includes(userId) ? users : [...users, userId]);
     })
 
     this.hubConnection.on('UserOffline', userId => {
-      this.onlineUsers.update(users => users.filter(x => x !== userId));
+      this.onlineUsersSignal.update(users => users.filter(x => x !== userId));
     });
 
     this.hubConnection.on('GetOnlineUsers', (userIds: string[]) => {
-      this.onlineUsers.set(userIds);
+      this.onlineUsersSignal.set(userIds);
     });
 
     this.hubConnection.start()
@@ -43,12 +44,16 @@ export class PresenceService {
     return this.onlineUsers().includes(userId);
   }
 
+  get isConnected() {
+    return this.hubConnection?.state === HubConnectionState.Connected;
+  }
+
   async stopHubConnection() {
     if (this.hubConnection?.state !== HubConnectionState.Disconnected) {
       this.hubConnection?.stop().catch(err => {console.log(err)});
     }
     this.hubConnection = undefined;
-    this.onlineUsers.set([]);
+    this.onlineUsersSignal.set([]);
   }
 
   setAccessTokenFactory(factory: () => string | undefined) {

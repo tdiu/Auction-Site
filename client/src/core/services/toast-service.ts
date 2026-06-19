@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import {Router} from '@angular/router';
 
 @Injectable({
   providedIn: 'root',
@@ -25,24 +24,26 @@ export class ToastService {
 
     const toast = document.createElement('div');
     toast.classList.add('alert', alertClass, 'shadow-lg');
-    
-    const displayMessage = typeof message === 'string' ? message : JSON.stringify(message);
 
-    toast.innerHTML = `
-    <span>${displayMessage}</span>
-    <button class="ml-4 btn btn-sm btn-ghost">x</button>
-    `
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
 
-    toast.querySelector('button')?.addEventListener('click', () => {
-      toastContainer.removeChild(toast);
-    })
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.classList.add('ml-4', 'btn', 'btn-sm', 'btn-ghost');
+    closeButton.textContent = 'x';
 
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-      if (toastContainer.contains(toast)){
+    const removeToast =() => {
+      if (toastContainer.contains(toast)) {
         toastContainer.removeChild(toast);
       }
-    }, duration);
+    }
+
+    closeButton.addEventListener('click', removeToast);
+    toast.append(messageSpan, closeButton);
+    toastContainer.appendChild(toast);
+
+    setTimeout(removeToast, duration);
   }
 
   success(message: string, duration?: number) {
