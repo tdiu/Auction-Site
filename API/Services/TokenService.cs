@@ -43,4 +43,16 @@ public class TokenService(IConfiguration config) : ITokenService
         return Convert.ToBase64String(randomBytes);
     }
 
+    public string HashRefreshToken(string refreshToken)
+    {
+        var secret = config["RefreshTokenKey"] ?? throw new Exception("Cannot get refresh token key");
+
+        var key = Encoding.UTF8.GetBytes(secret);
+        var tokenBytes = Encoding.UTF8.GetBytes(refreshToken);
+
+        using var hmac = new HMACSHA256(key);
+        var hashBytes = hmac.ComputeHash(tokenBytes);
+        return Convert.ToBase64String(hashBytes);
+    }
+
 }

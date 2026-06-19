@@ -63,7 +63,6 @@ export class AccountService {
   }
 
   setCurrentUser(user: User) {
-    localStorage.setItem('user', JSON.stringify(user));
     this.currentUser.set(user);
     this.presenceService.setAccessTokenFactory(() => this.currentUser()?.token);
     if (this.presenceService.hubConnection?.state !== HubConnectionState.Connected) {
@@ -72,7 +71,6 @@ export class AccountService {
   }
 
   clearCurrentUser() {
-    localStorage.removeItem('user');
     this.currentUser.set(null);
     this.presenceService.stopHubConnection();
   }

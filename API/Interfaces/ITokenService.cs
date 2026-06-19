@@ -6,4 +6,5 @@ public interface ITokenService
 {
     string CreateToken(AppUser user);
     string GenerateRefreshToken();
+    public string HashRefreshToken(string refreshToken);
 }

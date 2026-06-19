@@ -19,6 +19,10 @@ public class AuthServiceTests
         var tokenService = Substitute.For<ITokenService>();
         tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
         tokenService.GenerateRefreshToken().Returns("test-refresh-token");
+        tokenService.HashRefreshToken("test-refresh-token").Returns("hashed-test-refresh-token");
+        tokenService.HashRefreshToken("old-refresh-token").Returns("hashed-old-refresh-token");
+        tokenService.HashRefreshToken("expired-refresh-token").Returns("hashed-expired-refresh-token");
+        tokenService.HashRefreshToken("missing-refresh-token").Returns("hashed-missing-refresh-token");
 
         var services = new ServiceCollection();
         var dbName = $"AuthTests-{Guid.NewGuid()}";
@@ -63,7 +67,7 @@ public class AuthServiceTests
         var persisted = await userManager.FindByEmailAsync("new@test.com");
         Assert.NotNull(persisted);
         Assert.Equal("newuser", persisted!.DisplayName);
-        Assert.Equal("test-refresh-token", persisted.RefreshToken);
+        Assert.Equal("hashed-test-refresh-token", persisted.RefreshToken);
         Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
 
         tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "newuser"));
@@ -92,7 +96,7 @@ public class AuthServiceTests
         Assert.Equal("newuser", persisted!.DisplayName);
         Assert.Equal("newuser", persisted.UserName);
         Assert.Equal("new@test.com", persisted.Email);
-        Assert.Equal("test-refresh-token", persisted.RefreshToken);
+        Assert.Equal("hashed-test-refresh-token", persisted.RefreshToken);
         Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
     }
 
@@ -218,7 +222,7 @@ public class AuthServiceTests
 
         var persisted = await userManager.FindByEmailAsync("login@test.com");
         Assert.NotNull(persisted);
-        Assert.Equal("test-refresh-token", persisted!.RefreshToken);
+        Assert.Equal("hashed-test-refresh-token", persisted!.RefreshToken);
         Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
 
         tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "loginuser"));
@@ -250,7 +254,7 @@ public class AuthServiceTests
             DisplayName = "refreshuser",
             UserName = "refreshuser",
             Email = "refresh@test.com",
-            RefreshToken = "old-refresh-token",
+            RefreshToken = "hashed-old-refresh-token",
             RefreshTokenExpiry = DateTime.UtcNow.AddDays(1)
         };
         await userManager.CreateAsync(user, "Pass123");
@@ -265,7 +269,7 @@ public class AuthServiceTests
 
         var persisted = await userManager.FindByEmailAsync("refresh@test.com");
         Assert.NotNull(persisted);
-        Assert.Equal("test-refresh-token", persisted!.RefreshToken);
+        Assert.Equal("hashed-test-refresh-token", persisted!.RefreshToken);
         Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
 
         tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "refreshuser"));
@@ -297,7 +301,7 @@ public class AuthServiceTests
             DisplayName = "expireduser",
             UserName = "expireduser",
             Email = "expired@test.com",
-            RefreshToken = "expired-refresh-token",
+            RefreshToken = "hashed-expired-refresh-token",
             RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(-1)
         };
         await userManager.CreateAsync(user, "Pass123");
@@ -310,10 +314,61 @@ public class AuthServiceTests
 
         var persisted = await userManager.FindByEmailAsync("expired@test.com");
         Assert.NotNull(persisted);
-        Assert.Equal("expired-refresh-token", persisted!.RefreshToken);
+        Assert.Equal("hashed-expired-refresh-token", persisted!.RefreshToken);
 
         tokenService.DidNotReceive().CreateToken(Arg.Any<AppUser>());
         tokenService.DidNotReceive().GenerateRefreshToken();
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WithValidRefreshToken_ClearsStoredRefreshToken()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var user = new AppUser
+        {
+            DisplayName = "logoutuser",
+            UserName = "logoutuser",
+            Email = "logout@test.com",
+            RefreshToken = "hashed-old-refresh-token",
+            RefreshTokenExpiry = DateTime.UtcNow.AddDays(1)
+        };
+        await userManager.CreateAsync(user, "Pass123");
+
+        var result = await sut.LogoutAsync("old-refresh-token");
+
+        Assert.True(result.IsSuccess);
+
+        var persisted = await userManager.FindByEmailAsync("logout@test.com");
+        Assert.NotNull(persisted);
+        Assert.Null(persisted!.RefreshToken);
+        Assert.Null(persisted.RefreshTokenExpiry);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WithUnknownRefreshToken_ReturnsSuccessWithoutClearingOtherSessions()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var refreshTokenExpiry = DateTime.UtcNow.AddDays(1);
+        var user = new AppUser
+        {
+            DisplayName = "logoutuser",
+            UserName = "logoutuser",
+            Email = "logout@test.com",
+            RefreshToken = "hashed-old-refresh-token",
+            RefreshTokenExpiry = refreshTokenExpiry
+        };
+        await userManager.CreateAsync(user, "Pass123");
+
+        var result = await sut.LogoutAsync("missing-refresh-token");
+
+        Assert.True(result.IsSuccess);
+
+        var persisted = await userManager.FindByEmailAsync("logout@test.com");
+        Assert.NotNull(persisted);
+        Assert.Equal("hashed-old-refresh-token", persisted!.RefreshToken);
+        Assert.Equal(refreshTokenExpiry, persisted.RefreshTokenExpiry);
     }
 
     [Fact]

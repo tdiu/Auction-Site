@@ -53,25 +53,14 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         return await IssueAuthTokenAsync(user);
     }
 
-    public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken)
-    {
-        var user = await userManager.Users
-            .FirstOrDefaultAsync(x =>
-                x.RefreshToken == refreshToken &&
-                x.RefreshTokenExpiry > DateTime.UtcNow);
-        if (user == null)
-            return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
-
-        return await IssueAuthTokenAsync(user);
-    }
-
     public async Task<Result<bool>> LogoutAsync(string? refreshToken)
     {
         if (string.IsNullOrEmpty(refreshToken))
             return Result<bool>.Success(true);
 
+        var refreshTokenHash = tokenService.HashRefreshToken(refreshToken);
         var user = await userManager.Users
-            .FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
+            .FirstOrDefaultAsync(x => x.RefreshToken == refreshTokenHash);
 
         if (user == null)
             return Result<bool>.Success(true);
@@ -93,7 +82,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         var refreshToken = tokenService.GenerateRefreshToken();
         var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
 
-        user.RefreshToken = refreshToken;
+        user.RefreshToken = tokenService.HashRefreshToken(refreshToken);
         user.RefreshTokenExpiry = refreshTokenExpiry;
 
         var updateResult = await userManager.UpdateAsync(user);
@@ -107,6 +96,19 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
             refreshTokenExpiry
         );
         return Result<AuthResult>.Success(authResult);
+    }
+
+    public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken)
+    {
+        var refreshTokenHash = tokenService.HashRefreshToken(refreshToken);
+        var user = await userManager.Users
+            .FirstOrDefaultAsync(x =>
+                x.RefreshToken == refreshTokenHash &&
+                x.RefreshTokenExpiry > DateTime.UtcNow);
+        if (user == null)
+            return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
+
+        return await IssueAuthTokenAsync(user);
     }
 
     private static Dictionary<string, string[]> MapIdentityErrors(IEnumerable<IdentityError> identityErrors)
