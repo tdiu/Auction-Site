@@ -1,7 +1,5 @@
 using API.Entities;
 using API.Extensions;
-using API.Interfaces;
-using NSubstitute;
 using Xunit;
 
 namespace API.Tests.Extensions;
@@ -11,9 +9,6 @@ public class AppUserExtensionsTests
     [Fact]
     public void ToDto_MapsAllAppUserFieldsToUserDto()
     {
-        var tokenService = Substitute.For<ITokenService>();
-        tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
-
         var user = new AppUser
         {
             Id = "user-id-123",
@@ -22,7 +17,7 @@ public class AppUserExtensionsTests
             ImageUrl = "http://example.com/image.jpg"
         };
 
-        var result = user.ToDto(tokenService);
+        var result = user.ToDto("test-token");
 
         Assert.Equal("user-id-123", result.Id);
         Assert.Equal("TestUser", result.DisplayName);
@@ -32,27 +27,21 @@ public class AppUserExtensionsTests
     }
 
     [Fact]
-    public void ToDto_CallsTokenServiceWithCorrectUser()
+    public void ToDto_UsesProvidedToken()
     {
-        var tokenService = Substitute.For<ITokenService>();
-        tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
-
         var user = new AppUser { Id = "user-id", DisplayName = "TestUser", Email = "test@test.com" };
 
-        user.ToDto(tokenService);
+        var result = user.ToDto("test-token");
 
-        tokenService.Received(1).CreateToken(user);
+        Assert.Equal("test-token", result.Token);
     }
 
     [Fact]
     public void ToDto_WithNullImageUrl_ReturnsNullImageUrl()
     {
-        var tokenService = Substitute.For<ITokenService>();
-        tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
-
         var user = new AppUser { Id = "user-id", DisplayName = "TestUser", Email = "test@test.com", ImageUrl = null };
 
-        var result = user.ToDto(tokenService);
+        var result = user.ToDto("test-token");
 
         Assert.Null(result.ImageUrl);
     }

@@ -89,6 +89,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
 
     private async Task<Result<AuthResult>> IssueAuthTokenAsync(AppUser user)
     {
+        var accessToken = tokenService.CreateToken(user);
         var refreshToken = tokenService.GenerateRefreshToken();
         var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
 
@@ -101,7 +102,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
             return Result<AuthResult>.ValidationFailure(MapIdentityErrors(updateResult.Errors));
 
         var authResult = new AuthResult(
-            user.ToDto(tokenService),
+            user.ToDto(accessToken),
             refreshToken,
             refreshTokenExpiry
         );
