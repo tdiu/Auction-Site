@@ -18,6 +18,7 @@ public class AuthServiceTests
     {
         var tokenService = Substitute.For<ITokenService>();
         tokenService.CreateToken(Arg.Any<AppUser>()).Returns("test-token");
+        tokenService.GenerateRefreshToken().Returns("test-refresh-token");
 
         var services = new ServiceCollection();
         var dbName = $"AuthTests-{Guid.NewGuid()}";
@@ -40,7 +41,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_WithValidData_ReturnsSuccessAndUserDto()
+    public async Task RegisterAsync_WithValidData_ReturnsSuccessAndAuthResult()
     {
         var (sut, userManager, db, tokenService) = await CreateContext();
 
@@ -54,15 +55,19 @@ public class AuthServiceTests
         var result = await sut.RegisterAsync(dto);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("newuser", result.Value!.DisplayName);
-        Assert.Equal("new@test.com", result.Value!.Email);
-        Assert.Equal("test-token", result.Value!.Token);
+        Assert.Equal("newuser", result.Value!.User.DisplayName);
+        Assert.Equal("new@test.com", result.Value.User.Email);
+        Assert.Equal("test-token", result.Value.User.Token);
+        Assert.Equal("test-refresh-token", result.Value.RefreshToken);
 
         var persisted = await userManager.FindByEmailAsync("new@test.com");
         Assert.NotNull(persisted);
         Assert.Equal("newuser", persisted!.DisplayName);
+        Assert.Equal("test-refresh-token", persisted.RefreshToken);
+        Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
 
         tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "newuser"));
+        tokenService.Received(1).GenerateRefreshToken();
     }
 
     [Fact]
@@ -78,14 +83,17 @@ public class AuthServiceTests
         });
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("newuser", result.Value!.DisplayName);
-        Assert.Equal("new@test.com", result.Value.Email);
+        Assert.Equal("newuser", result.Value!.User.DisplayName);
+        Assert.Equal("new@test.com", result.Value.User.Email);
+        Assert.Equal("test-refresh-token", result.Value.RefreshToken);
 
         var persisted = await userManager.FindByEmailAsync("new@test.com");
         Assert.NotNull(persisted);
         Assert.Equal("newuser", persisted!.DisplayName);
         Assert.Equal("newuser", persisted.UserName);
         Assert.Equal("new@test.com", persisted.Email);
+        Assert.Equal("test-refresh-token", persisted.RefreshToken);
+        Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
     }
 
     [Fact]
@@ -102,6 +110,8 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Username is required", result.Error);
+        Assert.NotNull(result.ValidationErrors);
+        Assert.Contains("Username is required", result.ValidationErrors["displayName"]);
         Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
@@ -122,7 +132,9 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Username already exists", result.Error);
-        Assert.Equal(FailureReason.Conflict, result.Reason);
+        Assert.NotNull(result.ValidationErrors);
+        Assert.Contains("Username already exists", result.ValidationErrors["displayName"]);
+        Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
     [Fact]
@@ -142,7 +154,9 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Username already exists", result.Error);
-        Assert.Equal(FailureReason.Conflict, result.Reason);
+        Assert.NotNull(result.ValidationErrors);
+        Assert.Contains("Username already exists", result.ValidationErrors["displayName"]);
+        Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
     [Fact]
@@ -161,7 +175,9 @@ public class AuthServiceTests
         });
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("already taken", result.Error);
+        Assert.Equal("Email is already taken", result.Error);
+        Assert.NotNull(result.ValidationErrors);
+        Assert.Contains("Email is already taken", result.ValidationErrors["email"]);
         Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
@@ -179,11 +195,13 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Passwords", result.Error);
+        Assert.NotNull(result.ValidationErrors);
+        Assert.Contains(result.ValidationErrors["password"], error => error.Contains("Passwords"));
         Assert.Equal(FailureReason.Validation, result.Reason);
     }
 
     [Fact]
-    public async Task LoginAsync_WithValidCredentials_ReturnsSuccessAndUserDto()
+    public async Task LoginAsync_WithValidCredentials_ReturnsSuccessAndAuthResult()
     {
         var (sut, userManager, db, tokenService) = await CreateContext();
 
@@ -193,11 +211,18 @@ public class AuthServiceTests
         var result = await sut.LoginAsync(new LoginDto { Email = "login@test.com", Password = "Pass123" });
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("loginuser", result.Value!.DisplayName);
-        Assert.Equal("login@test.com", result.Value!.Email);
-        Assert.Equal("test-token", result.Value!.Token);
+        Assert.Equal("loginuser", result.Value!.User.DisplayName);
+        Assert.Equal("login@test.com", result.Value.User.Email);
+        Assert.Equal("test-token", result.Value.User.Token);
+        Assert.Equal("test-refresh-token", result.Value.RefreshToken);
+
+        var persisted = await userManager.FindByEmailAsync("login@test.com");
+        Assert.NotNull(persisted);
+        Assert.Equal("test-refresh-token", persisted!.RefreshToken);
+        Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
 
         tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "loginuser"));
+        tokenService.Received(1).GenerateRefreshToken();
     }
 
     [Fact]
@@ -211,7 +236,84 @@ public class AuthServiceTests
         var result = await sut.LoginAsync(new LoginDto { Email = "  login@test.com  ", Password = "Pass123" });
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("login@test.com", result.Value!.Email);
+        Assert.Equal("login@test.com", result.Value!.User.Email);
+        Assert.Equal("test-refresh-token", result.Value.RefreshToken);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WithValidRefreshToken_ReturnsSuccessAndRotatesRefreshToken()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var user = new AppUser
+        {
+            DisplayName = "refreshuser",
+            UserName = "refreshuser",
+            Email = "refresh@test.com",
+            RefreshToken = "old-refresh-token",
+            RefreshTokenExpiry = DateTime.UtcNow.AddDays(1)
+        };
+        await userManager.CreateAsync(user, "Pass123");
+
+        var result = await sut.RefreshTokenAsync("old-refresh-token");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("refreshuser", result.Value!.User.DisplayName);
+        Assert.Equal("refresh@test.com", result.Value.User.Email);
+        Assert.Equal("test-token", result.Value.User.Token);
+        Assert.Equal("test-refresh-token", result.Value.RefreshToken);
+
+        var persisted = await userManager.FindByEmailAsync("refresh@test.com");
+        Assert.NotNull(persisted);
+        Assert.Equal("test-refresh-token", persisted!.RefreshToken);
+        Assert.Equal(result.Value.RefreshTokenExpiry, persisted.RefreshTokenExpiry);
+
+        tokenService.Received(1).CreateToken(Arg.Is<AppUser>(u => u.DisplayName == "refreshuser"));
+        tokenService.Received(1).GenerateRefreshToken();
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WithUnknownRefreshToken_ReturnsUnauthorized()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var result = await sut.RefreshTokenAsync("missing-refresh-token");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Invalid refresh token", result.Error);
+        Assert.Equal(FailureReason.Unauthorized, result.Reason);
+
+        tokenService.DidNotReceive().CreateToken(Arg.Any<AppUser>());
+        tokenService.DidNotReceive().GenerateRefreshToken();
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WithExpiredRefreshToken_ReturnsUnauthorized()
+    {
+        var (sut, userManager, db, tokenService) = await CreateContext();
+
+        var user = new AppUser
+        {
+            DisplayName = "expireduser",
+            UserName = "expireduser",
+            Email = "expired@test.com",
+            RefreshToken = "expired-refresh-token",
+            RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(-1)
+        };
+        await userManager.CreateAsync(user, "Pass123");
+
+        var result = await sut.RefreshTokenAsync("expired-refresh-token");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Invalid refresh token", result.Error);
+        Assert.Equal(FailureReason.Unauthorized, result.Reason);
+
+        var persisted = await userManager.FindByEmailAsync("expired@test.com");
+        Assert.NotNull(persisted);
+        Assert.Equal("expired-refresh-token", persisted!.RefreshToken);
+
+        tokenService.DidNotReceive().CreateToken(Arg.Any<AppUser>());
+        tokenService.DidNotReceive().GenerateRefreshToken();
     }
 
     [Fact]

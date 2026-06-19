@@ -10,13 +10,57 @@ public class AccountController(IAuthService authService) : BaseApiController
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
         var result = await authService.RegisterAsync(registerDto);
-        return result.IsSuccess ? result.Value! : HandleFailure(result);
+        if (!result.IsSuccess)
+            return HandleFailure(result);
+
+        SetRefreshTokenCookie(
+            result.Value!.RefreshToken,
+            result.Value.RefreshTokenExpiry
+        );
+        return Ok(result.Value.User);
     }
 
     [HttpPost("login")] // api/account/login
     public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
     {
         var result = await authService.LoginAsync(loginDto);
-        return result.IsSuccess ? result.Value! : HandleFailure(result);
+        if (!result.IsSuccess)
+            return HandleFailure(result);
+
+        SetRefreshTokenCookie(
+            result.Value!.RefreshToken,
+            result.Value.RefreshTokenExpiry
+        );
+        return Ok(result.Value.User);
+    }
+
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<UserDto>> RefreshToken()
+    {
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return NoContent();
+
+        var result = await authService.RefreshTokenAsync(refreshToken);
+        if (!result.IsSuccess)
+            return HandleFailure(result);
+
+        SetRefreshTokenCookie(
+            result.Value!.RefreshToken,
+            result.Value.RefreshTokenExpiry
+        );
+        return Ok(result.Value.User);
+    }
+
+
+    private void SetRefreshTokenCookie(string refreshToken, DateTime expires)
+    {
+        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = expires
+        });
     }
 }

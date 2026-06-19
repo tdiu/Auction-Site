@@ -73,7 +73,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.InvalidModelStateResponseFactory = actionContext =>
     {
-        var problemDetails = new ValidationProblemDetails(actionContext.ModelState)
+        var errors = actionContext.ModelState
+            .Where(entry => entry.Value?.Errors.Count > 0)
+            .ToDictionary(
+                entry => ToCamelCase(entry.Key),
+                entry => entry.Value!.Errors
+                    .Select(error => string.IsNullOrEmpty(error.ErrorMessage)
+                        ? "The input was not valid."
+                        : error.ErrorMessage)
+                    .ToArray());
+
+        var problemDetails = new ValidationProblemDetails(errors)
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Validation Failed",
@@ -119,3 +129,15 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+static string ToCamelCase(string value)
+{
+    if (string.IsNullOrEmpty(value)) return value;
+
+    var lastSeparatorIndex = value.LastIndexOf('.');
+    var fieldName = lastSeparatorIndex >= 0 ? value[(lastSeparatorIndex + 1)..] : value;
+
+    if (string.IsNullOrEmpty(fieldName) || char.IsLower(fieldName[0])) return fieldName;
+
+    return char.ToLowerInvariant(fieldName[0]) + fieldName[1..];
+}

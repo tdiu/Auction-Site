@@ -4,19 +4,37 @@
      <p class="text-gray-400 mt-2">Create your account to start bidding and selling.</p>
   </div>
 
-  <form #registerForm="ngForm" class="flex flex-col gap-6 w-full" (ngSubmit)="register()">
+  <form #registerForm="ngForm" class="flex flex-col gap-6 w-full" (ngSubmit)="register(registerForm)">
+     @if (hasFieldErrors('form')) {
+       <div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3">
+         @for (error of getFieldErrors('form'); track error) {
+           <p class="text-red-400 text-sm">{{error}}</p>
+         }
+       </div>
+     }
+
      <!-- Email -->
      <div>
        <label class="block text-sm font-medium text-gray-300 mb-2" for="email">Email</label>
        <input 
          type="email" 
          id="email" 
+         #email="ngModel"
          class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+         [class.border-red-500]="hasFieldErrors('email') || (hasSubmitted && email.invalid)"
          name="email" 
          [(ngModel)]="creds.email" 
+         (ngModelChange)="clearFieldError('email')"
          placeholder="email@example.com" 
+         email
          required
        >
+       @if (email.invalid && hasSubmitted) {
+         <p class="text-red-500 text-xs mt-1">Enter a valid email address.</p>
+       }
+       @for (error of getFieldErrors('email'); track error) {
+         <p class="text-red-500 text-xs mt-1">{{error}}</p>
+       }
      </div>
 
      <!-- Display Name -->
@@ -25,12 +43,23 @@
        <input 
          type="text" 
          id="displayName" 
+         #displayName="ngModel"
          class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+         [class.border-red-500]="hasFieldErrors('displayName') || (hasSubmitted && displayName.invalid)"
          name="displayName" 
          [(ngModel)]="creds.displayName" 
+         (ngModelChange)="clearFieldError('displayName')"
          placeholder="Choose a display name" 
          required
+         minlength="3"
+         maxlength="15"
        >
+       @if (displayName.invalid && hasSubmitted) {
+         <p class="text-red-500 text-xs mt-1">Display name must be 3 to 15 characters.</p>
+       }
+       @for (error of getFieldErrors('displayName'); track error) {
+         <p class="text-red-500 text-xs mt-1">{{error}}</p>
+       }
      </div>
 
      <!-- Password -->
@@ -39,14 +68,24 @@
        <input 
          type="password" 
          id="password" 
+         #password="ngModel"
          class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+         [class.border-red-500]="hasFieldErrors('password') || (hasSubmitted && password.invalid)"
          name="password" 
          [(ngModel)]="creds.password" 
+         (ngModelChange)="onPasswordChange()"
          placeholder="Enter your password" 
          required 
-         minlength="4" 
+         minlength="6" 
          maxlength="15"
+         pattern="^(?=.*[A-Z])(?=.*\d).+$"
        >
+       @if (password.invalid && hasSubmitted && !suppressClearedPasswordError) {
+         <p class="text-red-500 text-xs mt-1">Password must be 6 to 15 characters with at least one uppercase letter and one digit.</p>
+       }
+       @for (error of getFieldErrors('password'); track error) {
+         <p class="text-red-500 text-xs mt-1">{{error}}</p>
+       }
      </div>
 
      <!-- Date of Birth -->
@@ -58,8 +97,9 @@
            <select 
              name="month" 
              [(ngModel)]="selectedMonth" 
-             (change)="updateDateOfBirth()" 
+             (change)="updateDateOfBirth(); clearFieldError('dateOfBirth')" 
              class="select w-full bg-[#1a1a1a] border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+             [class.border-red-500]="hasFieldErrors('dateOfBirth')"
              required
            >
              <option value="" disabled selected>Month</option>
@@ -73,8 +113,9 @@
            <select 
              name="day" 
              [(ngModel)]="selectedDay" 
-             (change)="updateDateOfBirth()" 
+             (change)="updateDateOfBirth(); clearFieldError('dateOfBirth')" 
              class="select w-full bg-[#1a1a1a] border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+             [class.border-red-500]="hasFieldErrors('dateOfBirth')"
              required
            >
              <option value="" disabled selected>Day</option>
@@ -88,8 +129,9 @@
            <select 
              name="year" 
              [(ngModel)]="selectedYear" 
-             (change)="updateDateOfBirth()" 
+             (change)="updateDateOfBirth(); clearFieldError('dateOfBirth')" 
              class="select w-full bg-[#1a1a1a] border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all" 
+             [class.border-red-500]="hasFieldErrors('dateOfBirth')"
              required
            >
              <option value="" disabled selected>Year</option>
@@ -99,6 +141,9 @@
            </select>
          </div>
        </div>
+       @for (error of getFieldErrors('dateOfBirth'); track error) {
+         <p class="text-red-500 text-xs mt-1">{{error}}</p>
+       }
      </div>
 
      <!-- Actions -->
@@ -112,7 +157,6 @@
        </button>
        <button 
          type="submit" 
-         [disabled]="registerForm.invalid" 
          class="bg-[#ff4742] hover:bg-[#e63e39] text-white font-bold px-8 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
        >
          Complete Sign-up

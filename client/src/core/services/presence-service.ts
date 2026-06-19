@@ -1,4 +1,4 @@
-import {inject, Injectable, NgZone, signal} from '@angular/core';
+import {inject, Injectable, signal} from '@angular/core';
 import {environment} from '../../environments/environment';
 import {ToastService} from './toast-service';
 import {User} from '../../types/user';
@@ -10,7 +10,6 @@ import {HubConnection, HubConnectionBuilder, HubConnectionState} from '@microsof
 export class PresenceService {
   private hubUrl = environment.hubUrl;
   private toast = inject(ToastService);
-  private zone = inject(NgZone);
   public hubConnection?: HubConnection;
   public onlineUsers = signal<string[]>([]);
 
@@ -25,21 +24,15 @@ export class PresenceService {
       .build();
 
     this.hubConnection.on('UserOnline', userId => {
-      this.zone.run(() => {
-        this.onlineUsers.update(users => users.includes(userId) ? users : [...users, userId]);
-      });
+      this.onlineUsers.update(users => users.includes(userId) ? users : [...users, userId]);
     })
 
     this.hubConnection.on('UserOffline', userId => {
-      this.zone.run(() => {
-        this.onlineUsers.update(users => users.filter(x => x !== userId));
-      });
+      this.onlineUsers.update(users => users.filter(x => x !== userId));
     });
 
     this.hubConnection.on('GetOnlineUsers', (userIds: string[]) => {
-      this.zone.run(() => {
-        this.onlineUsers.set(userIds);
-      });
+      this.onlineUsers.set(userIds);
     });
 
     this.hubConnection.start()

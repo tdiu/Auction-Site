@@ -10,16 +10,19 @@ namespace API.Services;
 
 public class AuthService(UserManager<AppUser> userManager, ITokenService tokenService) : IAuthService
 {
-    public async Task<Result<UserDto>> RegisterAsync(RegisterDto registerDto)
+    public async Task<Result<AuthResult>> RegisterAsync(RegisterDto registerDto)
     {
         var displayName = registerDto.DisplayName.Trim();
         var email = registerDto.Email.Trim();
 
         if (string.IsNullOrEmpty(displayName))
-            return Result<UserDto>.Failure("Username is required", FailureReason.Validation);
+            return Result<AuthResult>.ValidationFailure("displayName", "Username is required");
 
         if (await userManager.Users.AnyAsync(x => x.DisplayName == displayName))
-            return Result<UserDto>.Failure("Username already exists", FailureReason.Conflict);
+            return Result<AuthResult>.ValidationFailure("displayName", "Username already exists");
+
+        if (await userManager.Users.AnyAsync(x => x.Email == email))
+            return Result<AuthResult>.ValidationFailure("email", "Email is already taken");
 
         var user = new AppUser
         {
@@ -31,24 +34,77 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
 
         var res = await userManager.CreateAsync(user, registerDto.Password);
         if (!res.Succeeded)
-            return Result<UserDto>.Failure(
-                string.Join("; ", res.Errors.Select(e => e.Description)),
-                FailureReason.Validation);
+            return Result<AuthResult>.ValidationFailure(MapIdentityErrors(res.Errors));
 
-        return Result<UserDto>.Success(user.ToDto(tokenService));
+        return await IssueAuthTokenAsync(user);
     }
 
-    public async Task<Result<UserDto>> LoginAsync(LoginDto loginDto)
+    public async Task<Result<AuthResult>> LoginAsync(LoginDto loginDto)
     {
         var email = loginDto.Email.Trim();
         var user = await userManager.FindByEmailAsync(email);
         if (user == null)
-            return Result<UserDto>.Failure("Invalid Credentials", FailureReason.Unauthorized);
+            return Result<AuthResult>.Failure("Invalid Credentials", FailureReason.Unauthorized);
 
         var valid = await userManager.CheckPasswordAsync(user, loginDto.Password);
         if (!valid)
-            return Result<UserDto>.Failure("Invalid Credentials", FailureReason.Unauthorized);
+            return Result<AuthResult>.Failure("Invalid Credentials", FailureReason.Unauthorized);
 
-        return Result<UserDto>.Success(user.ToDto(tokenService));
+        return await IssueAuthTokenAsync(user);
+    }
+
+    public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken)
+    {
+        var user = await userManager.Users
+            .FirstOrDefaultAsync(x =>
+                x.RefreshToken == refreshToken &&
+                x.RefreshTokenExpiry > DateTime.UtcNow);
+        if (user == null)
+            return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
+
+        return await IssueAuthTokenAsync(user);
+    }
+
+    private async Task<Result<AuthResult>> IssueAuthTokenAsync(AppUser user)
+    {
+        var refreshToken = tokenService.GenerateRefreshToken();
+        var refreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiry = refreshTokenExpiry;
+
+        var updateResult = await userManager.UpdateAsync(user);
+
+        if (!updateResult.Succeeded)
+            return Result<AuthResult>.ValidationFailure(MapIdentityErrors(updateResult.Errors));
+
+        var authResult = new AuthResult(
+            user.ToDto(tokenService),
+            refreshToken,
+            refreshTokenExpiry
+        );
+        return Result<AuthResult>.Success(authResult);
+    }
+
+    private static Dictionary<string, string[]> MapIdentityErrors(IEnumerable<IdentityError> identityErrors)
+    {
+        return identityErrors
+            .GroupBy(GetIdentityErrorField)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(error => error.Description).ToArray());
+    }
+
+    private static string GetIdentityErrorField(IdentityError error)
+    {
+        if (error.Code.StartsWith("Password", StringComparison.OrdinalIgnoreCase))
+            return "password";
+
+        return error.Code switch
+        {
+            "DuplicateEmail" or "InvalidEmail" => "email",
+            "DuplicateUserName" or "InvalidUserName" => "displayName",
+            _ => "form"
+        };
     }
 }

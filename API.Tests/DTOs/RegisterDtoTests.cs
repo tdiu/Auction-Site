@@ -55,7 +55,7 @@ public class RegisterDtoTests
     [Fact]
     public void Validate_PasswordBelowMinLength_ReturnsError()
     {
-        var dto = new RegisterDto { DisplayName = "User", Email = "test@test.com", Password = "Abc" };
+        var dto = new RegisterDto { DisplayName = "User", Email = "test@test.com", Password = "Abc12" };
 
         var results = Validate(dto);
 
@@ -65,7 +65,7 @@ public class RegisterDtoTests
     [Fact]
     public void Validate_PasswordAtMinLength_ReturnsNoPasswordError()
     {
-        var dto = new RegisterDto { DisplayName = "User", Email = "test@test.com", Password = "Abcd" };
+        var dto = new RegisterDto { DisplayName = "User", Email = "test@test.com", Password = "Abcd12" };
 
         var results = Validate(dto);
 

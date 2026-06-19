@@ -59,11 +59,11 @@ public class AuctionService(IAuctionRepository auctionRepository) : IAuctionServ
     {
         var itemName = auctionRequestDto.ItemName.Trim();
         if (string.IsNullOrEmpty(itemName))
-            return Result<AuctionResponseDto>.Failure("Item name is required", FailureReason.Validation);
+            return Result<AuctionResponseDto>.ValidationFailure("itemName", "Item name is required");
 
 
         if (auctionRequestDto.BuyNowPrice.HasValue && auctionRequestDto.BuyNowPrice.Value < auctionRequestDto.StartingPrice)
-            return Result<AuctionResponseDto>.Failure("Buy Now Price cannot be set below starting price", FailureReason.Validation);
+            return Result<AuctionResponseDto>.ValidationFailure("buyNowPrice", "Buy Now Price cannot be set below starting price");
 
 
         var currTime = DateTimeOffset.UtcNow;
