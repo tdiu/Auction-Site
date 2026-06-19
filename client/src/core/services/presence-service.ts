@@ -1,8 +1,7 @@
 import {inject, Injectable, signal} from '@angular/core';
 import {environment} from '../../environments/environment';
-import {ToastService} from './toast-service';
-import {User} from '../../types/user';
 import {HubConnection, HubConnectionBuilder, HubConnectionState} from '@microsoft/signalr';
+import {ToastService} from './toast-service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,13 +11,14 @@ export class PresenceService {
   private toast = inject(ToastService);
   public hubConnection?: HubConnection;
   public onlineUsers = signal<string[]>([]);
+  private accessTokenFactory?: () => string | undefined;
 
-  createHubConnection(user: User) {
+  createHubConnection() {
     if (this.hubConnection?.state !== HubConnectionState.Disconnected && this.hubConnection) return;
 
     this.hubConnection = new HubConnectionBuilder()
       .withUrl(`${this.hubUrl}/presence`, {
-        accessTokenFactory: () => user.token
+        accessTokenFactory: () => this.accessTokenFactory?.() ?? ''
       })
       .withAutomaticReconnect()
       .build();
@@ -43,11 +43,16 @@ export class PresenceService {
     return this.onlineUsers().includes(userId);
   }
 
-  stopHubConnection() {
+  async stopHubConnection() {
     if (this.hubConnection?.state !== HubConnectionState.Disconnected) {
       this.hubConnection?.stop().catch(err => {console.log(err)});
     }
+    this.hubConnection = undefined;
     this.onlineUsers.set([]);
+  }
+
+  setAccessTokenFactory(factory: () => string | undefined) {
+    this.accessTokenFactory = factory;
   }
 
 }

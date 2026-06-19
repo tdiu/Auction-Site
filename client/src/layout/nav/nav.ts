@@ -30,7 +30,9 @@ export class Nav {
   }
 
   logout() {
-    this.accountService.logout();
-    this.router.navigateByUrl('/');
+    this.accountService.logout().subscribe({
+      next: () => this.router.navigateByUrl('/'),
+      error: () => this.router.navigateByUrl('/'),
+    })
   }
 }

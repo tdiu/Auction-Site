@@ -65,6 +65,28 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         return await IssueAuthTokenAsync(user);
     }
 
+    public async Task<Result<bool>> LogoutAsync(string? refreshToken)
+    {
+        if (string.IsNullOrEmpty(refreshToken))
+            return Result<bool>.Success(true);
+
+        var user = await userManager.Users
+            .FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
+
+        if (user == null)
+            return Result<bool>.Success(true);
+
+        user.RefreshToken = null;
+        user.RefreshTokenExpiry = null;
+
+        var result = await userManager.UpdateAsync(user);
+
+        if (!result.Succeeded)
+            return Result<bool>.Failure("Failed to log out", FailureReason.InternalError);
+
+        return Result<bool>.Success(true);
+    }
+
     private async Task<Result<AuthResult>> IssueAuthTokenAsync(AppUser user)
     {
         var refreshToken = tokenService.GenerateRefreshToken();

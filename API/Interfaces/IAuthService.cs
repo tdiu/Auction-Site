@@ -8,4 +8,5 @@ public interface IAuthService
     Task<Result<AuthResult>> RegisterAsync(RegisterDto registerDto);
     Task<Result<AuthResult>> LoginAsync(LoginDto loginDto);
     Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken);
+    Task<Result<bool>> LogoutAsync(string? refreshToken);
 }

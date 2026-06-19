@@ -34,6 +34,20 @@ public class AccountController(IAuthService authService) : BaseApiController
         return Ok(result.Value.User);
     }
 
+    [HttpPost("logout")]
+    public async Task<ActionResult> Logout()
+    {
+        var refreshToken = Request.Cookies["refreshToken"];
+        var result = await authService.LogoutAsync(refreshToken);
+
+        DeleteRefreshTokenCookie();
+
+        if (!result.IsSuccess)
+            return HandleFailure(result);
+
+        return NoContent();
+    }
+
     [HttpPost("refresh-token")]
     public async Task<ActionResult<UserDto>> RefreshToken()
     {
@@ -63,4 +77,7 @@ public class AccountController(IAuthService authService) : BaseApiController
             Expires = expires
         });
     }
+
+    private void DeleteRefreshTokenCookie() => Response.Cookies.Delete("refreshToken");
+
 }
