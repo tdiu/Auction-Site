@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 
 namespace API.Entities;
@@ -13,6 +14,14 @@ public class AppUser : IdentityUser
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastActive { get; set; }
     public string? Description { get; set; }
+
+    // nav props
     public ICollection<Auction> Auctions { get; set; } = new List<Auction>();
     public ICollection<Bid> Bids { get; set; } = new List<Bid>();
+
+    [JsonIgnore]
+    public List<Message> MessagesSent { get; set; } = [];
+
+    [JsonIgnore]
+    public List<Message> MessagesReceived { get; set; } = [];
 }

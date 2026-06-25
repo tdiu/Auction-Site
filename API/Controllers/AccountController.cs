@@ -59,10 +59,7 @@ public class AccountController(IAuthService authService) : BaseApiController
         if (!result.IsSuccess)
             return HandleFailure(result);
 
-        SetRefreshTokenCookie(
-            result.Value!.RefreshToken,
-            result.Value.RefreshTokenExpiry
-        );
+        SetRefreshTokenCookie(result.Value!.RefreshToken, result.Value.RefreshTokenExpiry);
         return Ok(result.Value.User);
     }
 

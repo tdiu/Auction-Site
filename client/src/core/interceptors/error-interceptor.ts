@@ -1,5 +1,5 @@
 import {HttpErrorResponse, HttpInterceptorFn} from '@angular/common/http';
-import {catchError, finalize, map, Observable, shareReplay, switchMap, throwError} from 'rxjs';
+import {catchError, EMPTY, finalize, map, Observable, shareReplay, switchMap, throwError} from 'rxjs';
 import {inject} from '@angular/core';
 import {NavigationExtras, Router} from '@angular/router';
 import {AccountService} from '../services/account-service';
@@ -39,7 +39,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           catchError(refreshError => {
             accountService.clearCurrentUser();
             router.navigateByUrl('/');
-            return throwError(() => refreshError);
+            return EMPTY;
           }),
           finalize(() => refreshRequest$ = null),
           shareReplay(1)
