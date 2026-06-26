@@ -38,4 +38,14 @@ public class MessageService(IMessageRepository messageRepository, IUserRepositor
 
         return Result<MessageDto>.Success(newMessage.ToDto());
     }
+
+    public async Task<PagedList<MessageDto>> GetMessagesByContainer(MessageParams messageParams) =>
+        await messageRepository.GetMessagesForMemberAsync(messageParams);
+
+    public async Task<IReadOnlyList<MessageDto>> GetMessageThread(string memberId, string recipientId)
+    {
+        await messageRepository.MarkThreadAsRead(memberId, recipientId);
+        return await messageRepository.GetMessageThread(memberId, recipientId);
+    }
+
 }

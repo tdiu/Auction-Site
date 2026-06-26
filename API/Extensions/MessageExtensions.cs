@@ -19,4 +19,19 @@ public static class MessageExtensions
             MessageSent = message.MessageSent,
         };
     }
+
+    public static IQueryable<MessageDto> ProjectToDto(this IQueryable<Message> query)
+    {
+        return query.Select(message => new MessageDto
+        {
+            Id = message.Id,
+            SenderId = message.SenderId,
+            SenderDisplayName = message.Sender.DisplayName,
+            RecipientId = message.RecipientId,
+            RecipientDisplayName = message.Recipient.DisplayName,
+            Content = message.Content,
+            DateRead = message.DateRead,
+            MessageSent = message.MessageSent,
+        });
+    }
 }

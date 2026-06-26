@@ -23,4 +23,28 @@ public class MessagesController(IMessageService messageService) : BaseApiControl
 
         return Ok(res.Value);
     }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<ActionResult<PagedList<MessageDto>>> GetMessagesByContainer([FromQuery] MessageParams messageParams)
+    {
+        var memberId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(memberId))
+            return Unauthorized();
+
+        messageParams.MemberId = memberId;
+        var messages = await messageService.GetMessagesByContainer(messageParams);
+        return Ok(messages);
+    }
+
+    [HttpGet("thread/{recipientId")]
+    [Authorize]
+    public async Task<ActionResult<IReadOnlyList<MessageDto>>> GetMessagesThread(string recipientId)
+    {
+        var memberId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(memberId))
+            return Unauthorized();
+
+        return Ok(messageService.GetMessageThread(memberId, recipientId));
+    }
 }
