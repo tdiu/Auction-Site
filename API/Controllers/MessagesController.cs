@@ -37,7 +37,7 @@ public class MessagesController(IMessageService messageService) : BaseApiControl
         return Ok(messages);
     }
 
-    [HttpGet("thread/{recipientId")]
+    [HttpGet("thread/{recipientId}")]
     [Authorize]
     public async Task<ActionResult<IReadOnlyList<MessageDto>>> GetMessagesThread(string recipientId)
     {
@@ -45,6 +45,6 @@ public class MessagesController(IMessageService messageService) : BaseApiControl
         if (string.IsNullOrWhiteSpace(memberId))
             return Unauthorized();
 
-        return Ok(messageService.GetMessageThread(memberId, recipientId));
+        return Ok(await messageService.GetMessageThread(memberId, recipientId));
     }
 }

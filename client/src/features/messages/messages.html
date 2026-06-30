@@ -1,1 +1,122 @@
-<p>messages works!</p>
+<div class="max-w-[1100px] mx-auto p-6">
+
+  @if (!selectedMessage()) {
+    <!-- ============ LIST VIEW ============ -->
+
+    <!-- Received / Sent tabs -->
+    <div class="flex justify-center mb-8">
+      <div class="bg-[#242424] p-1 rounded-xl border border-gray-800 flex gap-1">
+        <button (click)="setContainer('Inbox')"
+                [class.bg-[#ff4742]]="container() === 'Inbox'"
+                [class.text-white]="container() === 'Inbox'"
+                [class.text-gray-400]="container() !== 'Inbox'"
+                class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
+          Received
+        </button>
+        <button (click)="setContainer('Outbox')"
+                [class.bg-[#ff4742]]="container() === 'Outbox'"
+                [class.text-white]="container() === 'Outbox'"
+                [class.text-gray-400]="container() !== 'Outbox'"
+                class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all hover:text-white">
+          Sent
+        </button>
+      </div>
+    </div>
+
+    @let response = paginatedMessages();
+    @if (response) {
+      <div class="bg-[#242424] border border-gray-800 rounded-xl overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="text-gray-500 uppercase text-xs tracking-widest border-b border-gray-800">
+              <th class="py-3 px-4 text-left font-bold">{{ container() === 'Inbox' ? 'Sender' : 'Recipient' }}</th>
+              <th class="py-3 px-4 text-left font-bold">Message</th>
+              <th class="py-3 px-4 text-right font-bold">{{ container() === 'Inbox' ? 'Received' : 'Sent' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (message of response.items; track message.id) {
+              <tr (click)="openMessage(message)"
+                  class="border-b border-gray-800/50 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
+                  [class.font-semibold]="container() === 'Inbox' && !message.dateRead">
+                <td class="py-3 px-4 text-gray-200 whitespace-nowrap">
+                  {{ container() === 'Inbox' ? message.senderDisplayName : message.recipientDisplayName }}
+                </td>
+                <td class="py-3 px-4 text-gray-400">
+                  <div class="truncate max-w-md">{{ message.content }}</div>
+                </td>
+                <td class="py-3 px-4 text-gray-500 text-sm whitespace-nowrap text-right">
+                  {{ message.messageSent | date: 'medium' }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="py-20 text-center text-gray-500 uppercase tracking-[0.3em] text-sm">
+                  No messages
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (response.items.length) {
+        <div class="flex justify-center items-center gap-4 mt-8">
+          <button (click)="goToPage(response.page - 1)"
+                  [disabled]="!response.hasPreviousPage"
+                  class="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest
+                         transition-all disabled:opacity-30 disabled:cursor-not-allowed
+                         enabled:hover:bg-[#ff4742] enabled:hover:text-white
+                         text-gray-400 border border-gray-800">
+            Previous
+          </button>
+
+          <span class="text-gray-400 text-sm">
+            Page {{ response.page }} of {{ response.totalPages }}
+          </span>
+
+          <button (click)="goToPage(response.page + 1)"
+                  [disabled]="!response.hasNextPage"
+                  class="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest
+                         transition-all disabled:opacity-30 disabled:cursor-not-allowed
+                         enabled:hover:bg-[#ff4742] enabled:hover:text-white
+                         text-gray-400 border border-gray-800">
+            Next
+          </button>
+        </div>
+      }
+    }
+
+  } @else {
+    <!-- ============ READING PANE ============ -->
+    @let message = selectedMessage()!;
+
+    <button (click)="closeMessage()"
+            class="mb-6 px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest
+                   transition-all hover:bg-[#ff4742] hover:text-white
+                   text-gray-400 border border-gray-800 inline-flex items-center gap-2">
+      ← Back
+    </button>
+
+    <div class="bg-[#242424] border border-gray-800 rounded-xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-800 flex items-start justify-between gap-4">
+        <div class="text-sm space-y-1">
+          <p class="text-gray-200">
+            <span class="text-gray-500 uppercase text-xs tracking-widest mr-2">From</span>
+            {{ message.senderDisplayName }}
+          </p>
+          <p class="text-gray-200">
+            <span class="text-gray-500 uppercase text-xs tracking-widest mr-2">To</span>
+            {{ message.recipientDisplayName }}
+          </p>
+        </div>
+        <p class="text-gray-500 text-sm whitespace-nowrap">{{ message.messageSent | date: 'medium' }}</p>
+      </div>
+
+      <div class="p-6">
+        <p class="text-gray-200 whitespace-pre-wrap break-words leading-relaxed">{{ message.content }}</p>
+      </div>
+    </div>
+  }
+</div>
