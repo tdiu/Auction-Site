@@ -12,8 +12,8 @@ public class Message
     public bool RecipientDeleted { get; set; }
 
     // nav props
-    public required string SenderId  { get; set; }
+    public required string SenderId { get; set; }
     public AppUser Sender { get; set; } = null!;
-    public required string RecipientId  { get; set; }
+    public required string RecipientId { get; set; }
     public AppUser Recipient { get; set; } = null!;
 }
