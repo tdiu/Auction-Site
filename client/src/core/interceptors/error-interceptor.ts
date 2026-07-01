@@ -1,10 +1,11 @@
-import {HttpErrorResponse, HttpInterceptorFn} from '@angular/common/http';
+import {HttpContextToken, HttpErrorResponse, HttpInterceptorFn} from '@angular/common/http';
 import {catchError, EMPTY, finalize, map, Observable, shareReplay, switchMap, throwError} from 'rxjs';
 import {inject} from '@angular/core';
 import {NavigationExtras, Router} from '@angular/router';
 import {AccountService} from '../services/account-service';
 import {User} from '../../types/user';
 
+const RETRIED_AFTER_REFRESH = new HttpContextToken<boolean>(() => false);
 let refreshRequest$: Observable<User> | null = null;
 function getPathname(url: string) {
   return new URL(url, window.location.origin).pathname;
@@ -28,6 +29,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       const shouldTryRefresh =
         error.status === 401 &&
         !isAccountEndpoint(req.url) &&
+        !req.context.get(RETRIED_AFTER_REFRESH) &&
         !!accountService.currentUser();
 
       if (shouldTryRefresh) {
@@ -46,7 +48,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         );
 
         return refreshRequest$.pipe(
-          switchMap(() => next(req))
+          switchMap(() => next(req.clone({
+            context: req.context.set(RETRIED_AFTER_REFRESH, true)
+          })))
         );
       }
 
