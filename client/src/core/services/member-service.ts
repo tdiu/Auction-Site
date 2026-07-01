@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpParams} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {Member} from '../../types/member';
 
@@ -12,6 +12,11 @@ export class MemberService {
 
   getMembers() {
     return this.http.get<Member[]>(`${this.baseUrl}/users`);
+  }
+
+  searchMembers(query: string) {
+    const params = new HttpParams().set('search', query);
+    return this.http.get<Member[]>(`${this.baseUrl}/users`, {params});
   }
 
   getMember(displayName: string) {

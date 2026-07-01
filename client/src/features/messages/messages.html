@@ -3,8 +3,8 @@
   @if (!selectedMessage()) {
     <!-- ============ LIST VIEW ============ -->
 
-    <!-- Received / Sent tabs -->
-    <div class="flex justify-center mb-8">
+    <!-- Received / Sent tabs + New Message -->
+    <div class="relative flex justify-center mb-8">
       <div class="bg-[#242424] p-1 rounded-xl border border-gray-800 flex gap-1">
         <button (click)="setContainer('Inbox')"
                 [class.bg-[#ff4742]]="container() === 'Inbox'"
@@ -21,7 +21,81 @@
           Sent
         </button>
       </div>
+      <button (click)="toggleCompose()"
+              class="btn btn-sm bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-5
+                     absolute right-0 top-1/2 -translate-y-1/2">
+        {{ showCompose() ? 'Close' : 'New Message' }}
+      </button>
     </div>
+
+    <!-- Compose form -->
+    @if (showCompose()) {
+      <form #composeForm="ngForm" (ngSubmit)="sendMessage(composeForm)"
+            class="bg-[#242424] border border-gray-800 rounded-xl p-6 mb-6 flex flex-col gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2" for="recipient">To</label>
+
+          @if (selectedRecipient(); as recipient) {
+            <!-- Selected recipient chip -->
+            <div class="flex items-center gap-3 bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-2">
+              <div class="w-8 h-8 rounded-full border border-gray-700 overflow-hidden shrink-0">
+                <img [src]="recipient.imageUrl || '/user.png'" alt="" class="w-full h-full object-cover">
+              </div>
+              <span class="text-white text-sm flex-1">{{ recipient.displayName }}</span>
+              <button type="button" (click)="clearRecipient()"
+                      class="text-gray-500 hover:text-white text-lg leading-none px-1">&times;</button>
+            </div>
+          } @else {
+            <!-- Search input + results dropdown -->
+            <div class="relative">
+              <input type="text" id="recipient" name="recipientQuery" autocomplete="off"
+                     [(ngModel)]="recipientQuery" (ngModelChange)="onRecipientSearch($event)"
+                     class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white
+                            focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all"
+                     placeholder="Search users by name...">
+
+              @if (searchResults().length) {
+                <ul class="absolute z-10 mt-1 w-full bg-[#2a2a2a] border border-gray-800 rounded-lg shadow-2xl overflow-hidden">
+                  @for (member of searchResults(); track member.id) {
+                    <li (click)="selectRecipient(member)"
+                        class="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-800 transition-colors">
+                      <div class="w-8 h-8 rounded-full border border-gray-700 overflow-hidden shrink-0">
+                        <img [src]="member.imageUrl || '/user.png'" alt="" class="w-full h-full object-cover">
+                      </div>
+                      <span class="text-gray-200 text-sm">{{ member.displayName }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else if (recipientQuery.trim()) {
+                <div class="absolute z-10 mt-1 w-full bg-[#2a2a2a] border border-gray-800 rounded-lg px-4 py-3 text-gray-500 text-sm">
+                  No users found
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2" for="content">Message</label>
+          <textarea id="content" name="content" rows="4" maxlength="200"
+                    [(ngModel)]="compose.content" required
+                    class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white resize-none
+                           focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all"
+                    placeholder="Write your message..."></textarea>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button type="button" (click)="toggleCompose()"
+                  class="px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all
+                         text-gray-400 border border-gray-800 hover:text-white">
+            Cancel
+          </button>
+          <button type="submit" [disabled]="composeForm.invalid || !compose.recipientId || sending()"
+                  class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all
+                         bg-[#ff4742] hover:bg-[#e63e39] text-white disabled:opacity-30 disabled:cursor-not-allowed">
+            Send
+          </button>
+        </div>
+      </form>
+    }
 
     @let response = paginatedMessages();
     @if (response) {
@@ -116,6 +190,21 @@
 
       <div class="p-6">
         <p class="text-gray-200 whitespace-pre-wrap break-words leading-relaxed">{{ message.content }}</p>
+      </div>
+    </div>
+
+    <!-- Reply -->
+    <div class="mt-4 bg-[#242424] border border-gray-800 rounded-xl p-4">
+      <textarea [(ngModel)]="replyContent" rows="3" maxlength="200"
+                class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-4 py-3 text-white resize-none
+                       focus:outline-none focus:ring-2 focus:ring-[#ff4742] focus:border-transparent transition-all"
+                placeholder="Write a reply..."></textarea>
+      <div class="flex justify-end mt-3">
+        <button (click)="sendReply()" [disabled]="!replyContent.trim() || sending()"
+                class="px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all
+                       bg-[#ff4742] hover:bg-[#e63e39] text-white disabled:opacity-30 disabled:cursor-not-allowed">
+          Reply
+        </button>
       </div>
     </div>
   }
