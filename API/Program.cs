@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Stripe;
+using TokenService = API.Services.TokenService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,9 +37,14 @@ builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IBidService, BidService>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddSingleton(_ =>
+    new StripeClient(builder.Configuration["Stripe:SecretKey"]
+                     ?? throw new InvalidOperationException()));
 builder.Services.AddIdentityCore<AppUser>(options =>
     {
         options.Password.RequireNonAlphanumeric = false;

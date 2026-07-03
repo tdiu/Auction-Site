@@ -25,6 +25,7 @@ public class BaseApiController : Controller
             FailureReason.Unauthorized => StatusCodes.Status401Unauthorized,
             FailureReason.Conflict => StatusCodes.Status409Conflict,
             FailureReason.Validation => StatusCodes.Status400BadRequest,
+            FailureReason.Forbidden => StatusCodes.Status403Forbidden,
             _ => StatusCodes.Status500InternalServerError
         };
 

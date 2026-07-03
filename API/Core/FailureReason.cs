@@ -6,5 +6,6 @@ public enum FailureReason
     NotFound,
     Unauthorized,
     Conflict,
-    InternalError
+    InternalError,
+    Forbidden
 }
