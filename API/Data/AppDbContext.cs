@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
     public DbSet<Bid> Bids { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Payment> Payments { get; set; }
+    public DbSet<PaymentAttempt> PaymentAttempts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,31 +61,23 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             .HasForeignKey(b => b.AuctionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Fix for SQLite DateTimeOffset ordering
-        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
-        {
-            var dateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTimeOffset, string>(
-                v => v.ToString("O"),
-                v => DateTimeOffset.Parse(v));
+        modelBuilder.Entity<Payment>()
+            .HasIndex(p => p.AuctionId)
+            .IsUnique();
 
-            var nullableDateTimeOffsetConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTimeOffset?, string?>(
-                v => v.HasValue ? v.Value.ToString("O") : null,
-                v => v == null ? null : DateTimeOffset.Parse(v));
+        modelBuilder.Entity<Payment>()
+            .HasMany(p => p.Attempts)
+            .WithOne(a => a.Payment)
+            .HasForeignKey(a => a.PaymentId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                foreach (var property in entityType.GetProperties())
-                {
-                    if (property.ClrType == typeof(DateTimeOffset))
-                    {
-                        property.SetValueConverter(dateTimeOffsetConverter);
-                    }
-                    else if (property.ClrType == typeof(DateTimeOffset?))
-                    {
-                        property.SetValueConverter(nullableDateTimeOffsetConverter);
-                    }
-                }
-            }
-        }
+        modelBuilder.Entity<PaymentAttempt>()
+            .HasIndex(a => a.StripeSessionId)
+            .IsUnique();
+
+        modelBuilder.Entity<PaymentAttempt>()
+            .HasIndex(a => a.PaymentId)
+            .IsUnique()
+            .HasFilter("\"Status\" = 1");
     }
 }

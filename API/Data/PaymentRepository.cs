@@ -9,17 +9,15 @@ public class PaymentRepository(AppDbContext context) : IPaymentRepository
     public async Task<Payment?> GetByAuctionIdAsync(int auctionId)
     {
         return await context.Payments
-            .Where(p => p.AuctionId == auctionId)
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync();
+            .Include(p => p.Attempts)
+            .FirstOrDefaultAsync(a => a.AuctionId == auctionId);
     }
 
-    public async Task<Payment?> GetByStripeSessionIdAsync(string stripeSessionId)
+    public async Task<PaymentAttempt?> GetAttemptByStripeSessionIdAsync(string stripeSessionId)
     {
-        return await context.Payments
-            .Where(p => p.StripeSessionId == stripeSessionId)
-            .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync();
+        return await context.PaymentAttempts
+            .Include(a => a.Payment)
+            .FirstOrDefaultAsync(a => a.StripeSessionId == stripeSessionId);
     }
 
     public void Add(Payment payment) => context.Add(payment);
