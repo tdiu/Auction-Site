@@ -43,7 +43,9 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
             }
             catch (DbUpdateException e) when (IsUniqueViolation(e))
             {
-                // Concurrent request created it first. Re-read and continue
+                // Concurrent request created it first. Drop our failed insert (still tracked as
+                // Added) so the next save won't retry it, then re-read and continue.
+                unitOfWork.Payments.Detach(payment);
                 payment = await unitOfWork.Payments.GetByAuctionIdAsync(auctionId);
                 if (payment == null)
                     return Result<CreatePaymentResponseDto>.Failure("Could not create payment", FailureReason.InternalError);
@@ -87,7 +89,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
             Metadata = new Dictionary<string, string>
             {
                 ["payment_id"] = payment.PaymentId.ToString(),
-                ["attempt_id"] =  attempt.AttemptId.ToString(),
+                ["attempt_id"] = attempt.AttemptId.ToString(),
                 ["auction_id"] = auctionId.ToString()
             },
         };
@@ -135,39 +137,39 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
         switch (stripeEvent.Type)
         {
             case "checkout.session.completed":
-            {
-                var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
-                if (attempt == null) return;
+                {
+                    var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
+                    if (attempt == null) return;
 
-                var now = DateTimeOffset.UtcNow;
-                if (attempt.Status != PaymentAttemptStatus.Completed)
-                {
-                    attempt.Status = PaymentAttemptStatus.Completed;
-                    attempt.CompletedAt = now;
-                }
-                attempt.Payment.MarkPaid(now);
+                    var now = DateTimeOffset.UtcNow;
+                    if (attempt.Status != PaymentAttemptStatus.Completed)
+                    {
+                        attempt.Status = PaymentAttemptStatus.Completed;
+                        attempt.CompletedAt = now;
+                    }
+                    attempt.Payment.MarkPaid(now);
 
-                try
-                {
-                    await unitOfWork.CompleteAsync();
+                    try
+                    {
+                        await unitOfWork.CompleteAsync();
+                    }
+                    catch (DbUpdateException e) when (IsUniqueViolation(e))
+                    {
+                        logger.LogWarning(e, "Duplicate completed attempt for payment {PaymentId}, session {SessionId}",
+                            attempt.PaymentId, session.Id);
+                    }
+                    break;
                 }
-                catch (DbUpdateException e) when (IsUniqueViolation(e))
-                {
-                    logger.LogWarning(e, "Duplicate completed attempt for payment {PaymentId}, session {SessionId}",
-                        attempt.PaymentId, session.Id);
-                }
-                break;
-            }
             case "checkout.session.expired":
-            {
-                var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
-                if (attempt is { Status: PaymentAttemptStatus.Pending })
                 {
-                    attempt.Status = PaymentAttemptStatus.Expired;
-                    await unitOfWork.CompleteAsync();
+                    var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
+                    if (attempt is { Status: PaymentAttemptStatus.Pending })
+                    {
+                        attempt.Status = PaymentAttemptStatus.Expired;
+                        await unitOfWork.CompleteAsync();
+                    }
+                    break;
                 }
-                break;
-            }
         }
     }
 
