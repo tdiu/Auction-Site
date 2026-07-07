@@ -490,3 +490,6 @@ API/auction.db*
 
 # Antigravity CLI
 .antigravitycli/
+
+# Misc
+/TESTING.md
