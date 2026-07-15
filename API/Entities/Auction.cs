@@ -16,10 +16,17 @@ public class Auction
     [ConcurrencyCheck]
     public decimal? CurrentHighBid { get; set; }
     public string? CurrentHighBidderId { get; set; }
+    public DateTimeOffset? FinalizedAt { get; set; }
 
     // navigation props
     [ForeignKey(nameof(SellerId))]
     public AppUser Seller { get; set; } = null!;
 
+    // functions
+    public void Finalize(DateTimeOffset now)
+    {
+        if (FinalizedAt != null) return;
+        FinalizedAt = now;
+    }
 
 }

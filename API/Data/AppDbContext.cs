@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
     public DbSet<Message> Messages { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<PaymentAttempt> PaymentAttempts { get; set; }
+    public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +79,14 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
         modelBuilder.Entity<PaymentAttempt>()
             .HasIndex(a => a.PaymentId)
             .IsUnique()
-            .HasFilter("\"Status\" = 1");
+            .HasFilter($"\"Status\" = {(int)PaymentAttemptStatus.Completed}");
+
+        modelBuilder.Entity<OutboxMessage>(b =>
+        {
+            // Partial index to keep dispatcher claim query cheap. Filtered on pending state and ordered by visibleat, createdat
+            // to match claim's WHERE/ORDER BY exactly
+            b.Property(m => m.Payload).HasColumnType("jsonb");
+            b.HasIndex(m => new { m.VisibleAt, m.CreatedAt }).HasFilter("\"Status\" = 0");
+        });
     }
 }
