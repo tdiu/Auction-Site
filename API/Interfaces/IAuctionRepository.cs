@@ -8,4 +8,5 @@ public interface IAuctionRepository
     IQueryable<Auction> GetAuctionsQueryable();
     Task<Auction?> GetAuctionAsync(int id);
     Task<Auction> CreateAuctionAsync(Auction auction);
+    Task<IReadOnlyList<Auction>> ClaimEndedUnfinalizedAsync(DateTimeOffset now, int batchSize);
 }

@@ -47,7 +47,9 @@ public class PostgresFixture : IAsyncLifetime
             Substitute.For<IUserRepository>(),
             new AuctionRepository(db),
             Substitute.For<IBidRepository>(),
-            new PaymentRepository(db));
+            new PaymentRepository(db),
+            Substitute.For<IMessageRepository>(),
+            new OutboxRepository(db));
 
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
