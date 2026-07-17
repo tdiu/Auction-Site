@@ -36,6 +36,17 @@ public class PaymentWebhookTests
         };
         payment.Attempts.Add(attempt);
         ctx.PaymentRepo.GetAttemptByStripeSessionIdAsync(sessionId).Returns(attempt);
+        // The completed-payment producer reads the auction to build the outbox payload
+        // (seller + item name). Expired-path tests never reach this branch.
+        ctx.AuctionRepo.GetAuctionAsync(payment.AuctionId).Returns(new Auction
+        {
+            AuctionId = payment.AuctionId,
+            ItemName = "Test Item",
+            StartingPrice = 100m,
+            SellerId = "seller",
+            StartTime = DateTimeOffset.UtcNow.AddDays(-2),
+            EndTime = DateTimeOffset.UtcNow.AddMinutes(-5)
+        });
         return (payment, attempt);
     }
 

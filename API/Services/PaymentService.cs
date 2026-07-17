@@ -1,9 +1,11 @@
 using API.Core;
 using API.DTOs;
 using API.Entities;
+using API.Extensions;
 using API.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
+using System.Text.Json;
+using API.Services.Outbox;
 using Stripe;
 using Stripe.Checkout;
 
@@ -41,7 +43,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
             {
                 await unitOfWork.CompleteAsync();
             }
-            catch (DbUpdateException e) when (IsUniqueViolation(e))
+            catch (DbUpdateException e) when (e.IsUniqueViolation())
             {
                 // Concurrent request created it first. Drop our failed insert (still tracked as
                 // Added) so the next save won't retry it, then re-read and continue.
@@ -146,6 +148,20 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     {
                         attempt.Status = PaymentAttemptStatus.Completed;
                         attempt.CompletedAt = now;
+
+                        var auction = await unitOfWork.Auctions.GetAuctionAsync(attempt.Payment.AuctionId)
+                                      ?? throw new InvalidOperationException(
+                                          $"Auction {attempt.Payment.AuctionId} missing for completed payment");
+
+                        unitOfWork.Outbox.Add(new OutboxMessage
+                        {
+                            Type = "PaymentCompleted",
+                            CreatedAt = now,
+                            VisibleAt = now,
+                            Payload = JsonSerializer.Serialize(new PaymentCompletedPayload(
+                                attempt.PaymentId, attempt.Payment.AuctionId,
+                                attempt.Payment.UserId, auction.SellerId, auction.ItemName))
+                        });
                     }
                     attempt.Payment.MarkPaid(now);
 
@@ -153,7 +169,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     {
                         await unitOfWork.CompleteAsync();
                     }
-                    catch (DbUpdateException e) when (IsUniqueViolation(e))
+                    catch (DbUpdateException e) when (e.IsUniqueViolation())
                     {
                         logger.LogWarning(e, "Duplicate completed attempt for payment {PaymentId}, session {SessionId}",
                             attempt.PaymentId, session.Id);
@@ -172,9 +188,4 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                 }
         }
     }
-
-    private static bool IsUniqueViolation(DbUpdateException e) => e.InnerException is PostgresException
-    {
-        SqlState: PostgresErrorCodes.UniqueViolation
-    };
 }
