@@ -3,7 +3,7 @@ using API.Interfaces;
 
 namespace API.Services;
 
-public class AuctionSettleJob(IUnitOfWork unitOfWork, IConfiguration config, ILogger logger)
+public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config, ILogger logger)
 {
     public async Task RunAsync(CancellationToken ct)
     {
@@ -27,7 +27,7 @@ public class AuctionSettleJob(IUnitOfWork unitOfWork, IConfiguration config, ILo
             {
                 unitOfWork.Messages.AddMessage(new Message
                 {
-                    Id = $"auctioon-ended-{auction.AuctionId}",
+                    Id = $"auction-ended-{auction.AuctionId}",
                     SenderId = auction.SellerId,
                     RecipientId = auction.CurrentHighBidderId,
                     Content = $"You won \"{auction.ItemName}\" for {auction.CurrentHighBid:C}. Click to pay.",

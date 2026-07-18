@@ -14,6 +14,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-
+  mailpit:
+    image: axllent/mailpit
+    ports: [ "1025:1025", # SMTP in
+             "8025:8025"] # web UI to read caught mail
 volumes:
   pgdata:
