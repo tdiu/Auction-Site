@@ -1,0 +1,4 @@
+@model API.Services.Email.Models.WinnerEmailModel
+@{ Layout = "_Layout"; }
+<p>Congratulations, you won <strong>@Model.ItemName</strong> for @Model.Amount.ToString("C").</p>
+<p><a href="@Model.AuctionUrl">Complete your payment</a></p>
