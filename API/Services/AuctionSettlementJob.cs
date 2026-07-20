@@ -10,7 +10,7 @@ public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config,
     public async Task RunAsync(CancellationToken ct)
     {
         var batchSize = config.GetValue("Settlement:BatchSize", 50);
-        var now =  DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow;
 
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
 
@@ -25,7 +25,7 @@ public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config,
         {
             auction.Finalize(now);
 
-            if (auction is { CurrentHighBid: not null, CurrentHighBidderId : not null })
+            if (auction is { CurrentHighBid: not null, CurrentHighBidderId: not null })
             {
                 unitOfWork.Messages.AddMessage(new Message
                 {
@@ -49,6 +49,6 @@ public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config,
 
         await unitOfWork.CompleteAsync();
         await tx.CommitAsync(ct);
-        logger.LogInformation("Settlement swept {Count} ended auctions",  auctions.Count);
+        logger.LogInformation("Settlement swept {Count} ended auctions", auctions.Count);
     }
 }

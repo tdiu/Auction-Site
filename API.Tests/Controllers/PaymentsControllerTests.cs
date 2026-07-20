@@ -53,6 +53,7 @@ public class PaymentsControllerTests
 
     [Theory]
     [InlineData(FailureReason.NotFound, StatusCodes.Status404NotFound)]
+    [InlineData(FailureReason.Unauthorized, StatusCodes.Status401Unauthorized)]
     [InlineData(FailureReason.Conflict, StatusCodes.Status409Conflict)]
     [InlineData(FailureReason.Forbidden, StatusCodes.Status403Forbidden)]
     [InlineData(FailureReason.InternalError, StatusCodes.Status500InternalServerError)]
@@ -81,6 +82,22 @@ public class PaymentsControllerTests
         Assert.Same(dto, ok.Value);
     }
 
+    // GetStatus shares HandleFailure with CreateCheckoutSession, so this confirms wiring — that a
+    // failed Result is routed through HandleFailure rather than returned as Ok — not the mapping itself.
+    [Theory]
+    [InlineData(FailureReason.NotFound, StatusCodes.Status404NotFound)]
+    [InlineData(FailureReason.Forbidden, StatusCodes.Status403Forbidden)]
+    public async Task GetStatus_OnFailure_MapsReasonToStatusCode(FailureReason reason, int expected)
+    {
+        _service.GetPaymentStatus(1, "winner").Returns(Result<PaymentStatusDto>.Failure("nope", reason));
+        var controller = CreateController();
+
+        var result = await controller.GetStatus(1);
+
+        var obj = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(expected, obj.StatusCode);
+    }
+
     [Fact]
     public async Task Webhook_OnSuccess_ReturnsOk()
     {
@@ -101,6 +118,20 @@ public class PaymentsControllerTests
         var result = await controller.Webhook();
 
         Assert.IsType<BadRequestResult>(result);
+    }
+
+    // Characterization test pinning intentional behavior: only StripeException (bad signature) is
+    // translated to 400. Any other exception propagates so ExceptionMiddleware turns it into a 5xx —
+    // which is what makes Stripe RETRY the delivery. Wrapping the whole body in a catch-all that
+    // returned Ok()/BadRequest() would silently drop retryable events; this test guards against that.
+    [Fact]
+    public async Task Webhook_WhenServiceThrowsNonStripeException_PropagatesForA5xxRetry()
+    {
+        _service.When(s => s.HandleWebhook(Arg.Any<string>(), Arg.Any<string>()))
+            .Do(_ => throw new InvalidOperationException("webhook secret not configured"));
+        var controller = CreateController(httpContext: HttpContextWithBody("{}", signature: "t=1,v1=abc"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.Webhook());
     }
 
     private static DefaultHttpContext HttpContextWithBody(string body, string signature)

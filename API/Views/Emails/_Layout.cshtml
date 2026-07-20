@@ -1,6 +1,31 @@
-<div style="font-family: system-ui, sans-serif; max-width: 560px; margin: auto;">
-    <h2 style="color:#0d7c92;">GWAuction</h2>
-    @RenderBody()
-    <hr><small style="color:#888;">You received this because you have a GWAuction account</small>
-</div>
-
+@{
+    // Email-safe layout matching the GWAuction site theme (dark surfaces, red accent).
+    // Table-based with inline styles so Gmail/Outlook/Mailpit render it consistently.
+    var font = "-apple-system,'Segoe UI',system-ui,Roboto,Arial,sans-serif";
+}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a1a;margin:0;padding:0;width:100%;">
+    <tr>
+        <td align="center" style="padding:32px 16px;">
+            <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background-color:#242424;border:1px solid #1f2937;border-radius:12px;overflow:hidden;">
+                <!-- Header -->
+                <tr>
+                    <td style="padding:22px 32px;border-bottom:1px solid #1f2937;">
+                        <span style="font-family:@font;font-size:22px;font-weight:600;letter-spacing:-0.5px;text-transform:uppercase;color:#ffffff;">GWAuction</span>
+                    </td>
+                </tr>
+                <!-- Body -->
+                <tr>
+                    <td style="padding:32px;font-family:@font;font-size:15px;line-height:1.6;color:#d1d5db;">
+                        @RenderBody()
+                    </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                    <td style="padding:18px 32px;border-top:1px solid #1f2937;background-color:#1f2023;">
+                        <span style="font-family:@font;font-size:12px;line-height:1.5;color:#6b7280;">You received this because you have a GWAuction account.</span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
