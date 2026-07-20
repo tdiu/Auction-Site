@@ -18,8 +18,7 @@ namespace API.Tests.Integration;
 /// </summary>
 public class PostgresFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:16")
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16")
         .Build();
 
     public async ValueTask InitializeAsync()

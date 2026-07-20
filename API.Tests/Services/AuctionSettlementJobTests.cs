@@ -41,9 +41,14 @@ public class AuctionSettlementJobTests
     {
         var auction = new Auction
         {
-            AuctionId = 7, ItemName = "Strat", StartingPrice = 1m, SellerId = "seller",
-            StartTime = default, EndTime = DateTimeOffset.UtcNow.AddMinutes(-1),
-            CurrentHighBid = 1500m, CurrentHighBidderId = "winner"
+            AuctionId = 7,
+            ItemName = "Strat",
+            StartingPrice = 1m,
+            SellerId = "seller",
+            StartTime = default,
+            EndTime = DateTimeOffset.UtcNow.AddMinutes(-1),
+            CurrentHighBid = 1500m,
+            CurrentHighBidderId = "winner"
         };
         _auctions.ClaimEndedUnfinalizedAsync(Arg.Any<DateTimeOffset>(), Arg.Any<int>()).Returns([auction]);
 
@@ -65,9 +70,14 @@ public class AuctionSettlementJobTests
         // A lot ending unsold: the winner branch's `CurrentHighBid/BidderId not null` guard must skip it.
         var auction = new Auction
         {
-            AuctionId = 9, ItemName = "Unsold", StartingPrice = 1m, SellerId = "seller",
-            StartTime = default, EndTime = DateTimeOffset.UtcNow.AddMinutes(-1),
-            CurrentHighBid = null, CurrentHighBidderId = null
+            AuctionId = 9,
+            ItemName = "Unsold",
+            StartingPrice = 1m,
+            SellerId = "seller",
+            StartTime = default,
+            EndTime = DateTimeOffset.UtcNow.AddMinutes(-1),
+            CurrentHighBid = null,
+            CurrentHighBidderId = null
         };
         _auctions.ClaimEndedUnfinalizedAsync(Arg.Any<DateTimeOffset>(), Arg.Any<int>()).Returns([auction]);
 

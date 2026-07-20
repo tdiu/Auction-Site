@@ -63,15 +63,17 @@ public class OutboxDispatcher(
         catch (DbUpdateException e) when (e.IsUniqueViolation())
         {
             logger.LogWarning(e, "Outbox {id} was already delivered (duplicate key); marking processed", id);
-            await MarkProcessedAsync(id, ct);
+            await MarkProcessedAsync(id);
         }
         catch (Exception ex)
         {
-            await RecordFailureAsync(id, ex, maxAttempts, ct);
+            await RecordFailureAsync(id, ex, maxAttempts);
         }
     }
 
-    private async Task MarkProcessedAsync(Guid id, CancellationToken ct)
+    // No CancellationToken by design: this persists the message's terminal outcome and must run to
+    // completion even during shutdown, or the attempt accounting is lost and the row re-processes later.
+    private async Task MarkProcessedAsync(Guid id)
     {
         // Fresh scope. Caller's context is poisoned by a write that just failed
         using var scope = scopeFactory.CreateScope();
@@ -85,7 +87,8 @@ public class OutboxDispatcher(
         await unitOfWork.CompleteAsync();
     }
 
-    private async Task RecordFailureAsync(Guid id, Exception ex, int maxAttempts, CancellationToken ct)
+    // No CancellationToken: see MarkProcessedAsync — recording the failure/backoff must not be abandoned.
+    private async Task RecordFailureAsync(Guid id, Exception ex, int maxAttempts)
     {
         using var scope = scopeFactory.CreateScope();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();

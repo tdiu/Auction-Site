@@ -25,7 +25,9 @@ public class PaymentCompletedHandlerTests
 
     private static OutboxMessage MessageFor(PaymentCompletedPayload payload) => new()
     {
-        Type = "PaymentCompleted", CreatedAt = default, VisibleAt = default,
+        Type = "PaymentCompleted",
+        CreatedAt = default,
+        VisibleAt = default,
         Payload = JsonSerializer.Serialize(payload)
     };
 

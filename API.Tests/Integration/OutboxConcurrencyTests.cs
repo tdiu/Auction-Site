@@ -63,7 +63,9 @@ public class OutboxConcurrencyTests(PostgresFixture fixture)
         {
             var msg = new OutboxMessage
             {
-                Type = "PaymentCompleted", Payload = "{}", CreatedAt = DateTimeOffset.UtcNow,
+                Type = "PaymentCompleted",
+                Payload = "{}",
+                CreatedAt = DateTimeOffset.UtcNow,
                 VisibleAt = DateTimeOffset.UtcNow.AddMinutes(-1), // due
                 Attempts = maxAttempts,                           // burned its budget, never reported a failure
                 Status = OutboxMessageStatus.Pending
@@ -191,8 +193,11 @@ public class OutboxConcurrencyTests(PostgresFixture fixture)
         for (var i = 0; i < count; i++)
             db.OutboxMessages.Add(new OutboxMessage
             {
-                Type = "PaymentCompleted", Payload = "{}", CreatedAt = now,
-                VisibleAt = now.AddMinutes(-1), Status = OutboxMessageStatus.Pending
+                Type = "PaymentCompleted",
+                Payload = "{}",
+                CreatedAt = now,
+                VisibleAt = now.AddMinutes(-1),
+                Status = OutboxMessageStatus.Pending
             });
         await db.SaveChangesAsync();
     }
@@ -203,8 +208,12 @@ public class OutboxConcurrencyTests(PostgresFixture fixture)
         if (await db.Users.AnyAsync(u => u.Id == id)) return;
         db.Users.Add(new AppUser
         {
-            Id = id, DisplayName = id, UserName = id, NormalizedUserName = id.ToUpperInvariant(),
-            Email = $"{id}@test.com", NormalizedEmail = $"{id}@TEST.COM"
+            Id = id,
+            DisplayName = id,
+            UserName = id,
+            NormalizedUserName = id.ToUpperInvariant(),
+            Email = $"{id}@test.com",
+            NormalizedEmail = $"{id}@TEST.COM"
         });
         await db.SaveChangesAsync();
     }

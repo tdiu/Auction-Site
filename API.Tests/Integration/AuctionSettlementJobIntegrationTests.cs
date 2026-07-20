@@ -119,8 +119,12 @@ public class AuctionSettlementJobIntegrationTests(PostgresFixture fixture)
         if (await db.Users.AnyAsync(u => u.Id == id)) return;
         db.Users.Add(new AppUser
         {
-            Id = id, DisplayName = id, UserName = id, NormalizedUserName = id.ToUpperInvariant(),
-            Email = $"{id}@test.com", NormalizedEmail = $"{id}@TEST.COM"
+            Id = id,
+            DisplayName = id,
+            UserName = id,
+            NormalizedUserName = id.ToUpperInvariant(),
+            Email = $"{id}@test.com",
+            NormalizedEmail = $"{id}@TEST.COM"
         });
         await db.SaveChangesAsync();
     }
@@ -131,9 +135,13 @@ public class AuctionSettlementJobIntegrationTests(PostgresFixture fixture)
         var now = DateTimeOffset.UtcNow;
         var auction = new Auction
         {
-            ItemName = "Test Item", StartingPrice = 100m, SellerId = sellerId,
-            StartTime = now.AddDays(-2), EndTime = now.AddMinutes(-5), // ended
-            CurrentHighBid = highBid, CurrentHighBidderId = winnerId,
+            ItemName = "Test Item",
+            StartingPrice = 100m,
+            SellerId = sellerId,
+            StartTime = now.AddDays(-2),
+            EndTime = now.AddMinutes(-5), // ended
+            CurrentHighBid = highBid,
+            CurrentHighBidderId = winnerId,
             FinalizedAt = finalized ? now.AddMinutes(-4) : null
         };
         db.Auctions.Add(auction);

@@ -36,7 +36,9 @@ public class AuctionEndedHandlerTests
 
     private static OutboxMessage MessageFor(AuctionEndedPayload payload) => new()
     {
-        Type = "AuctionEnded", CreatedAt = default, VisibleAt = default,
+        Type = "AuctionEnded",
+        CreatedAt = default,
+        VisibleAt = default,
         Payload = JsonSerializer.Serialize(payload)
     };
 

@@ -72,7 +72,11 @@ public class OutboxDispatcherTests
     {
         var msg = new OutboxMessage
         {
-            Type = "PaymentCompleted", Payload = "{}", CreatedAt = default, VisibleAt = default, Attempts = 1
+            Type = "PaymentCompleted",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 1
         };
         var (uow, repo) = WireSingle(msg);
         var dispatcher = Build(uow, repo, Throwing("PaymentCompleted", new Exception("boom")), maxAttempts: 8);
@@ -90,7 +94,11 @@ public class OutboxDispatcherTests
     {
         var msg = new OutboxMessage
         {
-            Type = "PaymentCompleted", Payload = "{}", CreatedAt = default, VisibleAt = default, Attempts = 3
+            Type = "PaymentCompleted",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 3
         };
         var (uow, repo) = WireSingle(msg);
         var dispatcher = Build(uow, repo, Throwing("PaymentCompleted", new Exception("boom")), maxAttempts: 3);
@@ -107,7 +115,11 @@ public class OutboxDispatcherTests
     {
         var msg = new OutboxMessage
         {
-            Type = "PaymentCompleted", Payload = "{}", CreatedAt = default, VisibleAt = default, Attempts = 1
+            Type = "PaymentCompleted",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 1
         };
         var (uow, repo) = WireSingle(msg);
         // A deterministic-id collision surfaces as DbUpdateException/23505: proof a prior claim
@@ -131,13 +143,24 @@ public class OutboxDispatcherTests
         // Processed. The status guard in RecordFailureAsync must not stomp attempts/error onto it.
         var claimed = new OutboxMessage
         {
-            Id = Guid.NewGuid(), Type = "PaymentCompleted", Payload = "{}",
-            CreatedAt = default, VisibleAt = default, Attempts = 1
+            Id = Guid.NewGuid(),
+            Type = "PaymentCompleted",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 1
         };
         var reloadedAsProcessed = new OutboxMessage
         {
-            Id = claimed.Id, Type = "PaymentCompleted", Payload = "{}", CreatedAt = default, VisibleAt = default,
-            Attempts = 1, Status = OutboxMessageStatus.Processed, ProcessedAt = DateTimeOffset.UtcNow, LastError = null
+            Id = claimed.Id,
+            Type = "PaymentCompleted",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 1,
+            Status = OutboxMessageStatus.Processed,
+            ProcessedAt = DateTimeOffset.UtcNow,
+            LastError = null
         };
 
         var repo = Substitute.For<IOutboxRepository>();
