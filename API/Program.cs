@@ -1,12 +1,16 @@
 using System.Text;
 using API.Data;
 using API.Entities;
+using API.Extensions;
 using API.Interfaces;
 using API.Middleware;
 using API.Services;
+using API.Services.Email;
 using API.Services.Outbox;
 using API.Services.Outbox.Handlers;
 using API.SignalR;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -43,10 +47,24 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IOutboxHandler, PaymentCompletedHandler>();
+builder.Services.AddScoped<IOutboxHandler, AuctionEndedHandler>();
+builder.Services.AddScoped<AuctionSettlementJob>();
 builder.Services.AddScoped<OutboxDispatcher>();
+builder.Services.AddScoped<IEmailTemplateRenderer, RazorEmailTemplateRenderer>();
+builder.Services.AddRazorTemplating();
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(
+        builder.Configuration.GetConnectionString("DefaultConnection"))));
+builder.Services.AddHangfireServer();
 builder.Services.AddSingleton(_ =>
     new StripeClient(builder.Configuration["Stripe:SecretKey"]
                      ?? throw new InvalidOperationException()));
@@ -136,6 +154,10 @@ app.UseCors(x => x
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireDashboardAuthFilter(app.Environment)]
+});
 
 app.MapControllers();
 app.MapHub<PresenceHub>("/hubs/presence");
@@ -154,6 +176,26 @@ using (var scope = app.Services.CreateScope())
         var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred during database seeding");
     }
+}
+
+// Recurring-job registration is separate from seeding: a failure here means no settlement
+// sweep and no outbox dispatch, which must not be reported as (or masked by) a seeding error.
+try
+{
+    var recurring = app.Services.GetRequiredService<IRecurringJobManager>();
+    recurring.AddOrUpdate<AuctionSettlementJob>(
+        "auction-settlement",
+        j => j.RunAsync(CancellationToken.None),
+        builder.Configuration["Settlement:SweepCron"] ?? Cron.Minutely());
+    recurring.AddOrUpdate<OutboxDispatcher>(
+        "outbox-dispatch",
+        d => d.DispatchAsync(CancellationToken.None),
+        builder.Configuration["Outbox:DispatchCron"] ?? Cron.Minutely());
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Failed to register recurring Hangfire jobs; settlement and outbox dispatch will not run");
 }
 
 app.Run();

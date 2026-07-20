@@ -1,9 +1,11 @@
+using System.Text.Json;
 using API.Entities;
 using API.Interfaces;
+using API.Services.Outbox;
 
 namespace API.Services;
 
-public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config, ILogger logger)
+public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config, ILogger<AuctionSettlementJob> logger)
 {
     public async Task RunAsync(CancellationToken ct)
     {
@@ -32,6 +34,15 @@ public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config,
                     RecipientId = auction.CurrentHighBidderId,
                     Content = $"You won \"{auction.ItemName}\" for {auction.CurrentHighBid:C}. Click to pay.",
                     MessageSent = now
+                });
+
+                unitOfWork.Outbox.Add(new OutboxMessage
+                {
+                    Type = "AuctionEnded",
+                    CreatedAt = now,
+                    VisibleAt = now,
+                    Payload = JsonSerializer.Serialize(new AuctionEndedPayload(
+                        auction.AuctionId, auction.CurrentHighBidderId, auction.ItemName, auction.CurrentHighBid.Value))
                 });
             }
         }
