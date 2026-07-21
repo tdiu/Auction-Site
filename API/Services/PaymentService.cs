@@ -134,11 +134,15 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
         var secret = configuration["Stripe:WebhookSecret"] ?? throw new InvalidOperationException("Missing webhook secret");
         var stripeEvent = EventUtility.ConstructEvent(json, stripeSignature, secret);
 
-        if (stripeEvent.Data.Object is not Session session) return;
+        if (stripeEvent.Data.Object is not Session session)
+        {
+            logger.LogDebug("Ignoring unhandled Stripe event type {EventType}", stripeEvent.Type);
+            return;
+        }
 
         switch (stripeEvent.Type)
         {
-            case "checkout.session.completed":
+            case EventTypes.CheckoutSessionCompleted:
                 {
                     var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
                     if (attempt == null) return;
@@ -176,7 +180,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     }
                     break;
                 }
-            case "checkout.session.expired":
+            case EventTypes.CheckoutSessionExpired:
                 {
                     var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
                     if (attempt is { Status: PaymentAttemptStatus.Pending })
@@ -186,6 +190,9 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     }
                     break;
                 }
+            default:
+                logger.LogDebug("Ignoring unhandled Stripe event type {EventType}", stripeEvent.Type);
+                break;
         }
     }
 }
