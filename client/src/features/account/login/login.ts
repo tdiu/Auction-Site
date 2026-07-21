@@ -26,15 +26,18 @@ export class Login {
   // the payment deep-link) pass ?returnUrl=... to come straight back to where they were.
   private returnUrl = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
 
-  // Never bounce back to an auth page — e.g. clicking Login from the signup form should land home,
-  // not return to /register (or /login itself).
+  // Only accept a local path: one leading slash, but not '//host' or '/\host' (which browsers can
+  // treat as protocol-relative and navigate off-origin). Never bounce back to an auth page either —
+  // clicking Login from the signup form should land home, not return to /register (or /login itself).
   private resolveReturnUrl(raw: string | null): string {
-    if (!raw || raw.startsWith('/login') || raw.startsWith('/register')) return '/';
+    if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
+    const path = raw.split(/[?#]/, 1)[0];
+    if (path === '/login' || path === '/register') return '/';
     return raw;
   }
 
   constructor() {
-    // Already signed in? Nothing to do here — bounce to the destination.
+    // Go to destination if already logged in
     if (this.accountService.currentUser()) this.router.navigateByUrl(this.returnUrl);
   }
 

@@ -76,4 +76,14 @@ describe('Login', () => {
 
     expect(navSpy).toHaveBeenCalledWith('/auctions/5?pay=1');
   });
+
+  it('rejects a non-local returnUrl and goes home', () => {
+    queryReturnUrl = '//evil.com';
+    accountService.login.mockReturnValue(of({} as never));
+    const navSpy = vi.spyOn(router, 'navigateByUrl');
+
+    createComponent().login({invalid: false} as NgForm);
+
+    expect(navSpy).toHaveBeenCalledWith('/');
+  });
 });
