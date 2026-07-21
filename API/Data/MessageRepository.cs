@@ -37,6 +37,15 @@ public class MessageRepository(AppDbContext context) : IMessageRepository
                         && x.SenderId == recipientId && x.DateRead == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.DateRead, DateTimeOffset.UtcNow));
 
+    public Task<int> MarkMessageAsReadAsync(string messageId, string currentMemberId) =>
+        context.Messages
+            .Where(x => x.Id == messageId && x.RecipientId == currentMemberId && x.DateRead == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.DateRead, DateTimeOffset.UtcNow));
+
+    public Task<int> GetUnreadCountAsync(string memberId) =>
+        context.Messages
+            .CountAsync(x => x.RecipientId == memberId && x.DateRead == null && !x.RecipientDeleted);
+
     public async Task<IReadOnlyList<MessageDto>> GetMessageThread(string currentMemberId, string recipientId) =>
         await context.Messages
             .Where(x => (x.SenderId == recipientId && x.RecipientId == currentMemberId && !x.RecipientDeleted)

@@ -76,6 +76,16 @@ export class Messages {
   openMessage(message: Message) {
     this.replyContent = '';
     this.selectedMessage.set(message);
+
+    // Mark an inbox message read the first time it's opened, then sync local + nav state.
+    if (this.container() === 'Inbox' && !message.dateRead) {
+      this.messageService.markAsRead(message.id).subscribe({
+        next: () => {
+          message.dateRead = new Date().toISOString();
+          this.messageService.refreshUnread();
+        },
+      });
+    }
   }
 
   closeMessage() {

@@ -1,33 +1,36 @@
-import {HttpErrorResponse} from '@angular/common/http';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {provideRouter, Router} from '@angular/router';
-import {throwError} from 'rxjs';
+import {of} from 'rxjs';
 import {AccountService} from '../../core/services/account-service';
-import {ToastService} from '../../core/services/toast-service';
+import {MessageService} from '../../core/services/message-service';
 import {Nav} from './nav';
 
 describe('Nav', () => {
   let fixture: ComponentFixture<Nav>;
   let component: Nav;
-  let accountService: { currentUser: ReturnType<typeof vi.fn>; login: ReturnType<typeof vi.fn>; logout: ReturnType<typeof vi.fn> };
-  let toastService: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
+  let accountService: { currentUser: ReturnType<typeof vi.fn>; logout: ReturnType<typeof vi.fn> };
+  let messageService: {
+    refreshUnread: ReturnType<typeof vi.fn>;
+    unreadCount: { set: ReturnType<typeof vi.fn> };
+    hasUnread: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     accountService = {
       currentUser: vi.fn().mockReturnValue(null),
-      login: vi.fn(),
-      logout: vi.fn()
+      logout: vi.fn().mockReturnValue(of(undefined))
     };
-    toastService = {
-      error: vi.fn(),
-      success: vi.fn()
+    messageService = {
+      refreshUnread: vi.fn(),
+      unreadCount: {set: vi.fn()},
+      hasUnread: vi.fn().mockReturnValue(false)
     };
 
     await TestBed.configureTestingModule({
       imports: [Nav],
       providers: [
         {provide: AccountService, useValue: accountService},
-        {provide: ToastService, useValue: toastService},
+        {provide: MessageService, useValue: messageService},
         provideRouter([])
       ]
     }).compileComponents();
@@ -36,14 +39,12 @@ describe('Nav', () => {
     component = fixture.componentInstance;
   });
 
-  it('shows ProblemDetails detail when login fails', () => {
-    accountService.login.mockReturnValue(throwError(() => new HttpErrorResponse({
-      status: 401,
-      error: {title: 'Unauthorized', detail: 'Invalid Credentials'}
-    })));
+  it('navigates home on logout', () => {
+    const router = TestBed.inject(Router);
+    const navSpy = vi.spyOn(router, 'navigateByUrl');
 
-    component.login();
+    component.logout();
 
-    expect(toastService.error).toHaveBeenCalledWith('Invalid Credentials');
+    expect(navSpy).toHaveBeenCalledWith('/');
   });
 });

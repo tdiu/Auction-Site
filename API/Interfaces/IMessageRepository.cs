@@ -12,6 +12,8 @@ public interface IMessageRepository
     Task<PagedList<MessageDto>> GetMessagesForMemberAsync(MessageParams messageParams);
 
     Task MarkThreadAsRead(string currentMemberId, string recipientId);
+    Task<int> MarkMessageAsReadAsync(string messageId, string currentMemberId);
+    Task<int> GetUnreadCountAsync(string memberId);
     Task<IReadOnlyList<MessageDto>> GetMessageThread(string currentMemberId, string recipientId);
 
     Task<bool> SaveAllAsync();

@@ -114,8 +114,14 @@
             </button>
 
             @if (auction.buyNowPrice && !isSeller) {
-              <button class="btn btn-sm w-3/4 bg-[#2ecc71] hover:bg-[#27ae60] border-none text-white normal-case font-bold text-sm h-10 rounded-xl">
-                Buy Now for {{auction.buyNowPrice}} CAD
+              <button (click)="buyNow(auction.auctionId, auction.buyNowPrice)"
+                      [disabled]="isBuyingNow || isPlacingBid || !currentUser || hasEnded"
+                      class="btn btn-sm w-3/4 bg-[#2ecc71] hover:bg-[#27ae60] border-none text-white normal-case font-bold text-sm h-10 rounded-xl disabled:bg-gray-700 disabled:text-gray-400">
+                @if (isBuyingNow) {
+                  <span class="bid-spinner"></span>
+                } @else {
+                  {{ hasEnded ? 'Auction Ended' : !currentUser ? 'Login to Buy' : 'Buy Now for ' + auction.buyNowPrice + ' CAD' }}
+                }
               </button>
             }
 

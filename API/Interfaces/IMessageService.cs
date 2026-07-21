@@ -9,4 +9,6 @@ public interface IMessageService
     Task<Result<MessageDto>> CreateMessage(CreateMessageDto createMessageDto, string sender);
     Task<PagedList<MessageDto>> GetMessagesByContainer(MessageParams messageParams);
     Task<IReadOnlyList<MessageDto>> GetMessageThread(string memberId, string recipientId);
+    Task MarkAsRead(string messageId, string memberId);
+    Task<int> GetUnreadCount(string memberId);
 }

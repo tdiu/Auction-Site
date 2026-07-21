@@ -47,4 +47,27 @@ public class MessagesController(IMessageService messageService) : BaseApiControl
 
         return Ok(await messageService.GetMessageThread(memberId, recipientId));
     }
+
+    [HttpGet("unread-count")]
+    [Authorize]
+    public async Task<ActionResult<int>> GetUnreadCount()
+    {
+        var memberId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(memberId))
+            return Unauthorized();
+
+        return Ok(await messageService.GetUnreadCount(memberId));
+    }
+
+    [HttpPut("{id}/read")]
+    [Authorize]
+    public async Task<IActionResult> MarkAsRead(string id)
+    {
+        var memberId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(memberId))
+            return Unauthorized();
+
+        await messageService.MarkAsRead(id, memberId);
+        return NoContent();
+    }
 }

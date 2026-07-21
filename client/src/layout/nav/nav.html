@@ -10,7 +10,6 @@
         <a routerLink="/auctions" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Auctions</a>
         @if (accountService.currentUser()) {
           <a routerLink="/sell" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Sell</a>
-          <a routerLink="/messages" routerLinkActive="text-white border-b-2 border-[#ff4742]" class="hover:text-white transition-colors py-1">Messages</a>
         }
       </nav>
     </div>
@@ -41,24 +40,25 @@
             <li><a (click)="logout()" class="hover:bg-gray-800 py-2 text-red-400">Logout</a></li>
           </ul>
         </div>
+
+        <!-- Messages / notifications -->
+        <a routerLink="/messages" aria-label="Messages"
+           class="relative w-10 h-10 rounded-full bg-[#33333a] hover:bg-[#41414a]
+                  flex items-center justify-center transition-colors">
+          <img src="/notification-6-svgrepo-com.svg" alt="Messages" class="w-6 h-6 invert opacity-90">
+          @if (messageService.hasUnread()) {
+            <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-red-500 border-2 border-[#33333a]"></span>
+          }
+        </a>
       } @else {
-        <form #loginForm="ngForm" (ngSubmit)="login()" class="flex items-center gap-2">
-          <input
-            [(ngModel)]="creds.email"
-            name="email"
-            type="text"
-            class="input input-sm bg-[#1a1a1a] border-gray-700 text-white focus:border-[#ff4742] focus:ring-0 w-40"
-            placeholder="Email">
-          <input
-            [(ngModel)]="creds.password"
-            name="password"
-            type="password"
-            class="input input-sm bg-[#1a1a1a] border-gray-700 text-white focus:border-[#ff4742] focus:ring-0 w-40"
-            placeholder="Password">
-          <button type="submit" class="btn btn-sm bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-6">
-            Login
-          </button>
-        </form>
+        <a routerLink="/login" [queryParams]="{ returnUrl: router.url }"
+           class="btn btn-sm bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case px-6">
+          Login
+        </a>
+        <a routerLink="/register"
+           class="btn btn-sm btn-ghost text-gray-300 hover:text-white normal-case px-4">
+          Sign up
+        </a>
       }
     </div>
   </div>

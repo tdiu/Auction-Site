@@ -48,4 +48,9 @@ public class MessageService(IMessageRepository messageRepository, IUserRepositor
         return await messageRepository.GetMessageThread(memberId, recipientId);
     }
 
+    public Task MarkAsRead(string messageId, string memberId) =>
+        messageRepository.MarkMessageAsReadAsync(messageId, memberId);
+
+    public Task<int> GetUnreadCount(string memberId) =>
+        messageRepository.GetUnreadCountAsync(memberId);
 }

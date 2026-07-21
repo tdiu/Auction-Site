@@ -1,32 +1,28 @@
-import {Component, inject, signal} from '@angular/core';
-import {FormsModule} from '@angular/forms';
+import {Component, effect, inject} from '@angular/core';
 import {AccountService} from '../../core/services/account-service';
 import {Router, RouterLink, RouterLinkActive} from '@angular/router';
-import {getApiErrorMessage} from '../../types/error';
-import {ToastService} from '../../core/services/toast-service';
+import {MessageService} from '../../core/services/message-service';
 
 @Component({
   selector: 'app-nav',
-  imports: [FormsModule, RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './nav.html',
   styleUrl: './nav.css',
 })
 export class Nav {
   protected accountService = inject(AccountService);
-  private toast = inject(ToastService);
-  protected creds: any = {}
-  private router = inject(Router);
+  protected messageService = inject(MessageService);
+  protected router = inject(Router);
 
-  login() {
-    this.accountService.login(this.creds).subscribe({
-      next: results => {
-        this.toast.success('Logged in successfully.');
-        this.creds = {};
-      },
-      error: error => {
-        this.toast.error(getApiErrorMessage(error, 'Login failed'));
-      },
-    })
+  constructor() {
+    // Refresh the unread indicator whenever a user logs in; clear it on logout.
+    effect(() => {
+      if (this.accountService.currentUser()) {
+        this.messageService.refreshUnread();
+      } else {
+        this.messageService.unreadCount.set(0);
+      }
+    });
   }
 
   logout() {

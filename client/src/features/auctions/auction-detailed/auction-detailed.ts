@@ -28,6 +28,7 @@ export class AuctionDetailed {
   private refreshAuction$ = new BehaviorSubject<void>(undefined);
   showBids = false;
   isPlacingBid = false;
+  isBuyingNow = false;
 
   protected auction$ = combineLatest([
     this.route.paramMap,
@@ -86,6 +87,21 @@ export class AuctionDetailed {
       },
       error: error => {
         this.toastService.error(getApiErrorMessage(error, 'Failed to place bid'));
+      }
+    });
+  }
+
+  buyNow(auctionId: string, buyNowPrice: number) {
+    this.isBuyingNow = true;
+    this.bidService.createBid(auctionId, {amount: buyNowPrice}).pipe(
+      finalize(() => this.isBuyingNow = false)
+    ).subscribe({
+      next: () => {
+        this.toastService.success('Purchased successfully');
+        this.refreshAuction$.next();
+      },
+      error: error => {
+        this.toastService.error(getApiErrorMessage(error, 'Failed to complete purchase'));
       }
     });
   }
