@@ -32,7 +32,10 @@ public class AuctionSettlementJob(IUnitOfWork unitOfWork, IConfiguration config,
                     Id = $"auction-ended-{auction.AuctionId}",
                     SenderId = auction.SellerId,
                     RecipientId = auction.CurrentHighBidderId,
-                    Content = $"You won \"{auction.ItemName}\" for {auction.CurrentHighBid:C}. Click to pay.",
+                    Content = $"You won \"{auction.ItemName}\" for {auction.CurrentHighBid:C}.",
+                    // Same deep-link the winner email uses, but relative: this is handed to the
+                    // client router, so it must never carry a host.
+                    ActionUrl = $"/auctions/{auction.AuctionId}?pay=1",
                     MessageSent = now
                 });
 

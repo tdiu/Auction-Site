@@ -23,7 +23,8 @@ public class AuctionEndedHandler(
         if (string.IsNullOrEmpty(winner.Email))
             throw new InvalidOperationException($"Winner {payload.WinnerId} has no email");
 
-        var url = $"{config["ClientAppUrl"]}/auctions/{payload.AuctionId}";
+        // Deep-link opens pay panel on arrival. User still clicks Pay themselves
+        var url = $"{config["ClientAppUrl"]}/auctions/{payload.AuctionId}?pay=1";
 
         var body = await templateRenderer.RenderAsync("Winner",
             new WinnerEmailModel(payload.ItemName, payload.Amount, url), cancellationToken);

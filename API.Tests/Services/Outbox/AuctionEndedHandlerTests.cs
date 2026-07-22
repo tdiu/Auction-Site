@@ -58,7 +58,7 @@ public class AuctionEndedHandlerTests
         await _renderer.Received(1).RenderAsync("Winner",
             Arg.Is<WinnerEmailModel>(m =>
                 m.ItemName == "Strat" && m.Amount == 1500m &&
-                m.AuctionUrl == "https://client.test/auctions/42"),
+                m.AuctionUrl == "https://client.test/auctions/42?pay=1"),
             Arg.Any<CancellationToken>());
 
         // The idempotency key is the load-bearing assertion: it is the SMTP MessageId the mail layer

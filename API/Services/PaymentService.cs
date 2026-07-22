@@ -25,6 +25,8 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
         if (auction.CurrentHighBidderId != userId)
             return Result<CreatePaymentResponseDto>.Failure("Invalid user", FailureReason.Forbidden);
 
+        var winner = await unitOfWork.Users.GetUserByIdAsync(userId);
+
         var payment = await unitOfWork.Payments.GetByAuctionIdAsync(auctionId);
 
         if (payment == null)
@@ -72,6 +74,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
         var options = new SessionCreateOptions
         {
             Mode = "payment",
+            CustomerEmail = string.IsNullOrEmpty(winner?.Email) ? null : winner.Email,
             LineItems =
             [
                 new SessionLineItemOptions
@@ -85,7 +88,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     }
                 }
             ],
-            SuccessUrl = $"{clientUrl}/auctions/{auctionId}?session_id={{CHECKOUT_SESSION_ID}}",
+            SuccessUrl = $"{clientUrl}/auctions/{auctionId}/order-confirmation?session_id={{CHECKOUT_SESSION_ID}}",
             CancelUrl = $"{clientUrl}/auctions/{auctionId}?cancelled=true",
             ClientReferenceId = attempt.AttemptId.ToString(),
             Metadata = new Dictionary<string, string>
@@ -123,7 +126,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
 
         return Result<PaymentStatusDto>.Success(new PaymentStatusDto
         {
-            Status = payment.Status.ToString(),
+            Status = ResolveEffectiveStatus(payment),
             Amount = payment.Amount,
             CompletedAt = payment.CompletedAt
         });
@@ -194,5 +197,21 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                 logger.LogDebug("Ignoring unhandled Stripe event type {EventType}", stripeEvent.Type);
                 break;
         }
+    }
+
+    // Payment.Status only knows Pending | Paid. While pending, fold in most recent attempt so
+    private static string ResolveEffectiveStatus(Payment payment)
+    {
+        if (payment.Status == PaymentStatus.Paid)
+            return "Paid";
+
+        var latest = payment.Attempts.MaxBy(a => a.CreatedAt);
+        return latest?.Status switch
+        {
+            PaymentAttemptStatus.Failed => "Failed",
+            PaymentAttemptStatus.Cancelled => "Failed",
+            PaymentAttemptStatus.Expired => "Expired",
+            _ => "Pending"
+        };
     }
 }

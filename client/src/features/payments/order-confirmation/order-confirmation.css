@@ -1,0 +1,109 @@
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.step {
+  flex: 1;
+  position: relative;
+  text-align: center;
+  padding-top: 42px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6b7280;
+}
+
+/* bead */
+.step::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  z-index: 1;
+  background: #1a1a1a;
+  border: 2px solid #374151;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+/* connector, sits behind the bead and is skipped on the first step */
+.step:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: #374151;
+}
+
+.step.done { color: #e5e7eb; }
+.step.done::after { background: #2ecc71; border-color: #2ecc71; }
+.step.done::before { background: #2ecc71; }
+
+.step.active { color: #e5e7eb; }
+.step.active::after {
+  border-color: #f0a500;
+  animation: bead-pulse 1.4s ease-in-out infinite;
+}
+
+.step.warn { color: #f0a500; }
+.step.warn::after {
+  border-color: #f0a500;
+  background: rgba(240, 165, 0, 0.18);
+}
+
+.step.fail { color: #ff4742; }
+.step.fail::after { background: #ff4742; border-color: #ff4742; }
+
+@keyframes bead-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 165, 0, 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(240, 165, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step.active::after { animation: none; }
+}
+
+.order-summary {
+  margin-top: 32px;
+  border-top: 1px solid #374151;
+  padding-top: 20px;
+}
+
+.order-summary h2 {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #9ca3af;
+}
+
+.order-summary dl {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.order-summary dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.order-summary dt { color: #9ca3af; }
+
+.order-summary dd {
+  margin: 0;
+  color: #fff;
+  font-weight: 700;
+}

@@ -27,7 +27,7 @@ export class Login {
   private returnUrl = this.resolveReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
 
   // Only accept a local path: one leading slash, but not '//host' or '/\host' (which browsers can
-  // treat as protocol-relative and navigate off-origin). Never bounce back to an auth page either —
+  // treat as protocol-relative and navigate off-origin).
   // clicking Login from the signup form should land home, not return to /register (or /login itself).
   private resolveReturnUrl(raw: string | null): string {
     if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';

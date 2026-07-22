@@ -1,5 +1,6 @@
 import {Component, inject, signal} from '@angular/core';
 import {DatePipe} from '@angular/common';
+import {Router} from '@angular/router';
 import {FormsModule, NgForm} from '@angular/forms';
 import {Subject, of, debounceTime, distinctUntilChanged, switchMap} from 'rxjs';
 import {MessageService} from '../../core/services/message-service';
@@ -24,6 +25,7 @@ export class Messages {
   private memberService = inject(MemberService);
   private accountService = inject(AccountService);
   private toast = inject(ToastService);
+  private router = inject(Router);
 
   protected container = signal<Container>('Inbox');
   protected pageNumber = signal(1);
@@ -91,6 +93,14 @@ export class Messages {
   closeMessage() {
     this.replyContent = '';
     this.selectedMessage.set(null);
+  }
+
+  // System messages carry a relative in-app path. navigateByUrl rather than routerLink because the
+  // url includes a query string (?pay=1) that routerLink would treat as part of the path.
+  // Guarded the same way as the login returnUrl: one leading slash, never protocol-relative.
+  goToAction(actionUrl: string) {
+    if (!actionUrl.startsWith('/') || actionUrl.startsWith('//') || actionUrl.startsWith('/\\')) return;
+    this.router.navigateByUrl(actionUrl);
   }
 
   toggleCompose() {

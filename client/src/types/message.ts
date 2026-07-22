@@ -5,6 +5,7 @@ export type Message = {
   recipientId: string
   recipientDisplayName: string
   content: string
+  actionUrl?: string
   dateRead?: string
   messageSent: string
 }

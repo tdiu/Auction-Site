@@ -15,6 +15,7 @@ public static class MessageExtensions
             RecipientId = message.RecipientId,
             RecipientDisplayName = message.Recipient.DisplayName,
             Content = message.Content,
+            ActionUrl = message.ActionUrl,
             DateRead = message.DateRead,
             MessageSent = message.MessageSent,
         };
@@ -30,6 +31,7 @@ public static class MessageExtensions
             RecipientId = message.RecipientId,
             RecipientDisplayName = message.Recipient.DisplayName,
             Content = message.Content,
+            ActionUrl = message.ActionUrl,
             DateRead = message.DateRead,
             MessageSent = message.MessageSent,
         });

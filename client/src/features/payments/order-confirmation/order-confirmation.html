@@ -1,0 +1,77 @@
+<div class="max-w-[720px] mx-auto p-6 text-gray-200">
+
+  <!-- BREADCRUMBS -->
+  <div class="flex items-center gap-2 text-xs text-gray-500 mb-6 uppercase tracking-widest">
+    <a routerLink="/" class="hover:text-white transition-colors">Home</a>
+    <span>&gt;</span>
+    <a routerLink="/auctions" class="hover:text-white transition-colors">Auctions</a>
+    <span>&gt;</span>
+    <span class="text-gray-300">Order Confirmation</span>
+  </div>
+
+  <div class="bg-[#242424] rounded-2xl p-8 border border-gray-800 shadow-2xl">
+
+    <!-- Confirmed -> Processing -> Paid -->
+    <ol class="stepper">
+      <li class="step done">Confirmed</li>
+      <li class="step"
+          [class.active]="view() === 'processing'"
+          [class.warn]="view() === 'timeout'"
+          [class.done]="view() === 'paid' || view() === 'failed'">Processing</li>
+      <li class="step"
+          [class.done]="view() === 'paid'"
+          [class.fail]="view() === 'failed'">Paid</li>
+    </ol>
+
+    <div class="text-center mt-8">
+      @switch (view()) {
+        @case ('processing') {
+          <h1 class="text-2xl font-black text-white italic uppercase tracking-tight">Confirming your payment</h1>
+          <p class="text-gray-400 text-sm mt-2">This usually takes a moment. Don't close this page.</p>
+        }
+        @case ('paid') {
+          <h1 class="text-2xl font-black text-[#2ecc71] italic uppercase tracking-tight">Payment complete</h1>
+          <p class="text-gray-400 text-sm mt-2">Thanks! Your receipt is on its way by email.</p>
+        }
+        @case ('timeout') {
+          <h1 class="text-2xl font-black text-white italic uppercase tracking-tight">Payment received</h1>
+          <p class="text-gray-400 text-sm mt-2">Still confirming with our payment provider. We'll email your receipt when it's done.</p>
+        }
+        @case ('failed') {
+          <h1 class="text-2xl font-black text-[#ff4742] italic uppercase tracking-tight">Payment didn't go through</h1>
+          <p class="text-gray-400 text-sm mt-2">Nothing has been charged. You can try again from the auction page.</p>
+          <a routerLink="/auctions/{{ auctionId }}" [queryParams]="{pay: 1}"
+             class="btn btn-sm mt-6 bg-[#ff4742] hover:bg-[#e63e39] border-none text-white normal-case font-bold h-10 rounded-xl px-6">
+            Try again
+          </a>
+        }
+      }
+    </div>
+
+    @if (status(); as s) {
+      @let a = auction();
+      <section class="order-summary">
+        <h2>Order summary</h2>
+        <dl>
+          <!-- item + seller come from the auction; amount + status from the payment -->
+          @if (a) {
+            <div><dt>Item</dt><dd>{{ a.itemName }}</dd></div>
+            <div><dt>Seller</dt><dd>{{ a.sellerName }}</dd></div>
+          }
+          <div><dt>Amount</dt><dd>{{ s.amount }} CAD</dd></div>
+          <div><dt>Payment status</dt><dd>{{ s.status }}</dd></div>
+          @if (s.completedAt) {
+            <div><dt>Paid on</dt><dd>{{ s.completedAt | date:'medium' }}</dd></div>
+          }
+        </dl>
+      </section>
+    }
+
+    <div class="text-center mt-8">
+      <a routerLink="/auctions/{{ auctionId }}"
+         class="text-[10px] text-gray-500 hover:text-white transition-colors uppercase font-bold tracking-widest">
+        Back to auction
+      </a>
+    </div>
+  </div>
+</div>

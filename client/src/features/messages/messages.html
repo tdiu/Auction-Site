@@ -190,6 +190,14 @@
 
       <div class="p-6">
         <p class="text-gray-200 whitespace-pre-wrap break-words leading-relaxed">{{ message.content }}</p>
+
+        <!-- System messages (e.g. auction won) carry an in-app destination; person-to-person ones don't. -->
+        @if (message.actionUrl) {
+          <button (click)="goToAction(message.actionUrl)"
+                  class="btn btn-sm mt-5 bg-[#2ecc71] hover:bg-[#27ae60] border-none text-white normal-case font-bold h-10 rounded-xl px-6">
+            Complete your payment
+          </button>
+        }
       </div>
     </div>
 

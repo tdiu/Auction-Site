@@ -102,7 +102,7 @@ public class PaymentServiceTests
         Assert.Contains("metadata[payment_id]=100", body);
         Assert.Contains("metadata[attempt_id]=500", body);
         Assert.Contains("metadata[auction_id]=1", body);
-        Assert.Contains($"success_url={PaymentTestContext.ClientAppUrl}/auctions/1?session_id=", body);
+        Assert.Contains($"success_url={PaymentTestContext.ClientAppUrl}/auctions/1/order-confirmation?session_id=", body);
         Assert.Contains($"cancel_url={PaymentTestContext.ClientAppUrl}/auctions/1?cancelled=true", body);
         Assert.Equal("attempt-500", ctx.Http.LastRequest!.StripeHeaders["Idempotency-Key"]);
     }
@@ -198,5 +198,97 @@ public class PaymentServiceTests
         Assert.Equal("Paid", result.Value!.Status);
         Assert.Equal(150m, result.Value.Amount);
         Assert.Equal(completedAt, result.Value.CompletedAt);
+    }
+
+    // ---- effective status ----
+    // Payment.Status is only Pending|Paid, so a failed checkout is invisible on the payment itself.
+    // GetPaymentStatus folds the latest attempt up so the client can tell "waiting on the webhook"
+    // apart from a real failure. These cover the branch that was unreachable before.
+
+    [Theory]
+    [InlineData(PaymentAttemptStatus.Failed, "Failed")]
+    [InlineData(PaymentAttemptStatus.Cancelled, "Failed")]
+    [InlineData(PaymentAttemptStatus.Expired, "Expired")]
+    [InlineData(PaymentAttemptStatus.Pending, "Pending")]
+    public async Task GetPaymentStatus_WhenPending_FoldsInLatestAttempt(
+        PaymentAttemptStatus attemptStatus, string expected)
+    {
+        var ctx = new PaymentTestContext();
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(PendingPaymentWith(
+            (attemptStatus, DateTimeOffset.UtcNow)));
+
+        var result = await ctx.Service.GetPaymentStatus(1, "winner");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expected, result.Value!.Status);
+    }
+
+    [Fact]
+    public async Task GetPaymentStatus_WhenPendingWithNoAttempts_ReturnsPending()
+    {
+        var ctx = new PaymentTestContext();
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(PendingPaymentWith());
+
+        var result = await ctx.Service.GetPaymentStatus(1, "winner");
+
+        Assert.Equal("Pending", result.Value!.Status);
+    }
+
+    [Fact]
+    public async Task GetPaymentStatus_RetryAfterFailedAttempt_ReadsPending()
+    {
+        var ctx = new PaymentTestContext();
+        var now = DateTimeOffset.UtcNow;
+        // Newest attempt wins: a winner retrying a failed checkout must not sit on a "Failed"
+        // stepper while a perfectly healthy second attempt is in flight.
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(PendingPaymentWith(
+            (PaymentAttemptStatus.Failed, now.AddMinutes(-5)),
+            (PaymentAttemptStatus.Pending, now)));
+
+        var result = await ctx.Service.GetPaymentStatus(1, "winner");
+
+        Assert.Equal("Pending", result.Value!.Status);
+    }
+
+    [Fact]
+    public async Task GetPaymentStatus_PaidWinsOverAnyEarlierFailedAttempt()
+    {
+        var ctx = new PaymentTestContext();
+        var now = DateTimeOffset.UtcNow;
+        // MarkPaid is the terminal latch: once the payment is Paid, a stale Expired webhook for an
+        // abandoned earlier session must not drag the reported status backwards.
+        var payment = PendingPaymentWith(
+            (PaymentAttemptStatus.Completed, now.AddMinutes(-5)),
+            (PaymentAttemptStatus.Expired, now));
+        payment.MarkPaid(now);
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(payment);
+
+        var result = await ctx.Service.GetPaymentStatus(1, "winner");
+
+        Assert.Equal("Paid", result.Value!.Status);
+    }
+
+    private static Payment PendingPaymentWith(params (PaymentAttemptStatus Status, DateTimeOffset CreatedAt)[] attempts)
+    {
+        var payment = new Payment
+        {
+            AuctionId = 1,
+            UserId = "winner",
+            Amount = 150m,
+            Status = PaymentStatus.Pending
+        };
+
+        foreach (var (status, createdAt) in attempts)
+        {
+            payment.Attempts.Add(new PaymentAttempt
+            {
+                PaymentId = 1,
+                Amount = 150m,
+                Status = status,
+                CreatedAt = createdAt
+            });
+        }
+
+        return payment;
     }
 }
