@@ -35,4 +35,10 @@ export class Nav {
       error: () => this.router.navigateByUrl('/'),
     })
   }
+
+  // daisyUI keeps the dropdown open while the menu holds focus; blurring the active element closes
+  // it after a menu item is clicked.
+  closeDropdown() {
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
 }

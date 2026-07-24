@@ -1,4 +1,31 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import "tailwindcss";
-@plugin "daisyui"
+@plugin "daisyui";
+
+/* Order status badge. Shared by the order list and the order detail page, so it lives here rather
+   than in a component stylesheet (Angular scopes component styles by default). */
+.sbadge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 13px 6px 11px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  border: 1px solid #374151; background: #1a1a1a; color: #9ca3af;
+  white-space: nowrap;
+}
+
+.sbadge .pip { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+
+.sbadge.is-paid       { color: #2ecc71; border-color: rgba(46, 204, 113, 0.45); background: rgba(46, 204, 113, 0.12); }
+.sbadge.is-processing { color: #f0a500; border-color: rgba(240, 165, 0, 0.45);  background: rgba(240, 165, 0, 0.12); }
+.sbadge.is-failed     { color: #ff4742; border-color: rgba(255, 71, 66, 0.45);  background: rgba(255, 71, 66, 0.12); }
+
+.sbadge.is-processing .pip { animation: pip-pulse 1.4s ease-in-out infinite; }
+
+@keyframes pip-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sbadge.is-processing .pip { animation: none; }
+}

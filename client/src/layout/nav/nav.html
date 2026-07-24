@@ -37,6 +37,7 @@
           </div>
           <ul tabindex="0" class="dropdown-content menu bg-[#2a2a2a] border border-gray-800 rounded-xl z-1 w-52 p-2 mt-2 shadow-2xl text-gray-200">
             <li><a class="hover:bg-gray-800 py-2">Edit Profile</a></li>
+            <li><a routerLink="/orders" (click)="closeDropdown()" class="hover:bg-gray-800 py-2">Orders</a></li>
             <li><a (click)="logout()" class="hover:bg-gray-800 py-2 text-red-400">Logout</a></li>
           </ul>
         </div>

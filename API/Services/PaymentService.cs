@@ -88,7 +88,7 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     }
                 }
             ],
-            SuccessUrl = $"{clientUrl}/auctions/{auctionId}/order-confirmation?session_id={{CHECKOUT_SESSION_ID}}",
+            SuccessUrl = $"{clientUrl}/orders/{payment.PaymentId}?session_id={{CHECKOUT_SESSION_ID}}",
             CancelUrl = $"{clientUrl}/auctions/{auctionId}?cancelled=true",
             ClientReferenceId = attempt.AttemptId.ToString(),
             Metadata = new Dictionary<string, string>
@@ -126,10 +126,25 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
 
         return Result<PaymentStatusDto>.Success(new PaymentStatusDto
         {
-            Status = ResolveEffectiveStatus(payment),
+            Status = payment.ToEffectiveStatus(),
             Amount = payment.Amount,
             CompletedAt = payment.CompletedAt
         });
+    }
+
+    public async Task<Result<OrderDto>> GetOrder(int orderId, string userId)
+    {
+        var payment = await unitOfWork.Payments.GetByIdAsync(orderId);
+        if (payment == null || payment.UserId != userId)
+            return Result<OrderDto>.Failure("No order found", FailureReason.NotFound);
+
+        return Result<OrderDto>.Success(payment.ToOrderDto());
+    }
+
+    public async Task<IReadOnlyList<OrderDto>> GetOrdersForUser(string userId)
+    {
+        var payments = await unitOfWork.Payments.GetForUserAsync(userId);
+        return payments.Select(p => p.ToOrderDto()).ToList();
     }
 
     public async Task HandleWebhook(string json, string stripeSignature)
@@ -197,21 +212,5 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                 logger.LogDebug("Ignoring unhandled Stripe event type {EventType}", stripeEvent.Type);
                 break;
         }
-    }
-
-    // Payment.Status only knows Pending | Paid. While pending, fold in most recent attempt so
-    private static string ResolveEffectiveStatus(Payment payment)
-    {
-        if (payment.Status == PaymentStatus.Paid)
-            return "Paid";
-
-        var latest = payment.Attempts.MaxBy(a => a.CreatedAt);
-        return latest?.Status switch
-        {
-            PaymentAttemptStatus.Failed => "Failed",
-            PaymentAttemptStatus.Cancelled => "Failed",
-            PaymentAttemptStatus.Expired => "Expired",
-            _ => "Pending"
-        };
     }
 }

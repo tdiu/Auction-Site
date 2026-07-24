@@ -102,7 +102,8 @@ public class PaymentServiceTests
         Assert.Contains("metadata[payment_id]=100", body);
         Assert.Contains("metadata[attempt_id]=500", body);
         Assert.Contains("metadata[auction_id]=1", body);
-        Assert.Contains($"success_url={PaymentTestContext.ClientAppUrl}/auctions/1/order-confirmation?session_id=", body);
+        // Success lands on the order page, keyed by the freshly assigned PaymentId (100 in this fixture).
+        Assert.Contains($"success_url={PaymentTestContext.ClientAppUrl}/orders/100?session_id=", body);
         Assert.Contains($"cancel_url={PaymentTestContext.ClientAppUrl}/auctions/1?cancelled=true", body);
         Assert.Equal("attempt-500", ctx.Http.LastRequest!.StripeHeaders["Idempotency-Key"]);
     }
@@ -267,6 +268,87 @@ public class PaymentServiceTests
 
         Assert.Equal("Paid", result.Value!.Status);
     }
+
+    // ---- GetOrder / GetOrdersForUser ----
+
+    // A stranger must not be able to tell an order apart from one that never existed, so a
+    // wrong-owner read returns NotFound, not Forbidden, which would confirm it exists.
+    [Fact]
+    public async Task GetOrder_WhenNotOwner_ReturnsNotFound()
+    {
+        var ctx = new PaymentTestContext();
+        ctx.PaymentRepo.GetByIdAsync(100).Returns(OrderPayment(userId: "owner"));
+
+        var result = await ctx.Service.GetOrder(100, "intruder");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.NotFound, result.Reason);
+    }
+
+    [Fact]
+    public async Task GetOrder_WhenMissing_ReturnsNotFound()
+    {
+        var ctx = new PaymentTestContext();
+        ctx.PaymentRepo.GetByIdAsync(100).Returns((Payment?)null);
+
+        var result = await ctx.Service.GetOrder(100, "winner");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.NotFound, result.Reason);
+    }
+
+    [Fact]
+    public async Task GetOrder_WhenOwner_MapsAuctionFieldsOntoOrder()
+    {
+        var ctx = new PaymentTestContext();
+        ctx.PaymentRepo.GetByIdAsync(100).Returns(OrderPayment(userId: "winner"));
+
+        var result = await ctx.Service.GetOrder(100, "winner");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Test Item", result.Value!.ItemName);
+        Assert.Equal("Seller", result.Value.SellerName);
+        Assert.Equal(1, result.Value.AuctionId);
+        Assert.Equal("Paid", result.Value.Status);
+    }
+
+    // GetForUserAsync already filters + orders in SQL, so the service test only proves the
+    // projection runs over the whole set. Ordering belongs in a repository/integration test.
+    [Fact]
+    public async Task GetOrdersForUser_ProjectsEveryPayment()
+    {
+        var ctx = new PaymentTestContext();
+        ctx.PaymentRepo.GetForUserAsync("winner")
+            .Returns([OrderPayment("winner"), OrderPayment("winner")]);
+
+        var orders = await ctx.Service.GetOrdersForUser("winner");
+
+        Assert.Equal(2, orders.Count);
+        Assert.All(orders, o => Assert.Equal("Test Item", o.ItemName));
+    }
+
+    // A Paid payment carrying the auction + seller the order projection reads. GetByIdAsync eager
+    // loads both in production; here we build them inline.
+    private static Payment OrderPayment(string userId = "winner") => new()
+    {
+        PaymentId = 100,
+        AuctionId = 1,
+        UserId = userId,
+        Amount = 150m,
+        Status = PaymentStatus.Paid,
+        CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-10),
+        CompletedAt = DateTimeOffset.UtcNow,
+        Auction = new Auction
+        {
+            AuctionId = 1,
+            ItemName = "Test Item",
+            StartingPrice = 100m,
+            SellerId = "seller",
+            StartTime = DateTimeOffset.UtcNow.AddDays(-2),
+            EndTime = DateTimeOffset.UtcNow.AddMinutes(-5),
+            Seller = new AppUser { DisplayName = "Seller" }
+        }
+    };
 
     private static Payment PendingPaymentWith(params (PaymentAttemptStatus Status, DateTimeOffset CreatedAt)[] attempts)
     {

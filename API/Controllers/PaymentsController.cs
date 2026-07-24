@@ -32,6 +32,27 @@ public class PaymentsController(IPaymentService paymentService, ILogger<Payments
         return res.IsSuccess ? Ok(res.Value) : HandleFailure(res);
     }
 
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetOrders()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        return Ok(await paymentService.GetOrdersForUser(userId));
+    }
+
+    [HttpGet("{orderId:int}")]
+    public async Task<ActionResult<OrderDto>> GetOrder(int orderId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+            return Unauthorized();
+
+        var res = await paymentService.GetOrder(orderId, userId);
+        return res.IsSuccess ? Ok(res.Value) : HandleFailure(res);
+    }
+
     [AllowAnonymous]
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook()

@@ -49,7 +49,7 @@ export class AuctionDetailed {
     shareReplay({bufferSize: 1, refCount: true})
   );
 
-  // The winner email deep-links to ?pay=1. That only emphasises the pay panel - visibility is gated
+  // The winner email deep-links to ?pay=1. That only emphasises the pay panel. Visibility gated
   // on winner + ended, so the panel shows for a winner who navigates here normally too.
   protected highlightPay = toSignal(
     this.route.queryParamMap.pipe(map(params => params.get('pay') === '1')),

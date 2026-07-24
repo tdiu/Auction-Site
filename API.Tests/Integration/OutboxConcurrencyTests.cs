@@ -95,6 +95,7 @@ public class OutboxConcurrencyTests(PostgresFixture fixture)
         await DeleteMessageAsync("payment-completed-1", ct); // a prior run may have left it
         await EnsureUserAsync("buyer");
         await EnsureUserAsync("seller");
+        await SeedPaidPaymentAsync(paymentId: 1, buyerId: "buyer", sellerId: "seller", ct);
 
         // One PaymentCompleted message; its handler writes Message id "payment-completed-1".
         Guid id;
@@ -146,32 +147,76 @@ public class OutboxConcurrencyTests(PostgresFixture fixture)
     /// <summary>A dispatcher whose scopes resolve a real UnitOfWork + PaymentCompletedHandler over the fixture DB.</summary>
     private OutboxDispatcher BuildDispatcher()
     {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Outbox:BatchSize"] = "10",
+                ["Outbox:MaxAttempts"] = "8",
+                ["Outbox:LeaseMinutes"] = "5",
+                ["ClientAppUrl"] = "https://client.test"
+            })
+            .Build();
+
         var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(config);
+        services.AddLogging();
         services.AddScoped<AppDbContext>(_ => fixture.CreateDbContext());
-        services.AddScoped<IUserRepository>(_ => Substitute.For<IUserRepository>());
+        // Real user repo now: the handler reads the buyer to address the receipt email.
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBidRepository>(_ => Substitute.For<IBidRepository>());
         services.AddScoped<IAuctionRepository, AuctionRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        // The handler now sends a receipt too; stub the mail seams so dispatch stays DB-only.
+        services.AddScoped<IEmailSender>(_ => Substitute.For<IEmailSender>());
+        services.AddScoped<IEmailTemplateRenderer>(_ =>
+        {
+            var renderer = Substitute.For<IEmailTemplateRenderer>();
+            renderer.RenderAsync(Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
+                .Returns("<html>receipt</html>");
+            return renderer;
+        });
         services.AddScoped<IOutboxHandler, PaymentCompletedHandler>();
         var sp = services.BuildServiceProvider();
-
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Outbox:BatchSize"] = "10",
-                ["Outbox:MaxAttempts"] = "8",
-                ["Outbox:LeaseMinutes"] = "5"
-            })
-            .Build();
 
         return new OutboxDispatcher(
             sp.GetRequiredService<IServiceScopeFactory>(),
             new OutboxRepository(fixture.CreateDbContext()),
             config,
             NullLogger<OutboxDispatcher>.Instance);
+    }
+
+    // The receipt lookup needs a real Payment (with its auction + seller) behind PaymentId. Idempotent
+    // on the shared DB: any prior row with this id is dropped first, then a fresh auction + payment seeded.
+    private async Task SeedPaidPaymentAsync(int paymentId, string buyerId, string sellerId, CancellationToken ct)
+    {
+        await using var db = fixture.CreateDbContext();
+        await db.Database.ExecuteSqlAsync($"DELETE FROM \"Payments\" WHERE \"PaymentId\" = {paymentId}", ct);
+
+        var auction = new Auction
+        {
+            ItemName = "Test Item",
+            StartingPrice = 100m,
+            SellerId = sellerId,
+            StartTime = DateTimeOffset.UtcNow.AddDays(-2),
+            EndTime = DateTimeOffset.UtcNow.AddMinutes(-5)
+        };
+        db.Auctions.Add(auction);
+        await db.SaveChangesAsync(ct);
+
+        db.Payments.Add(new Payment
+        {
+            PaymentId = paymentId,
+            AuctionId = auction.AuctionId,
+            UserId = buyerId,
+            Amount = 150m,
+            Status = PaymentStatus.Paid,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-10),
+            CompletedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync(ct);
     }
 
     private async Task ClearOutboxAsync(CancellationToken ct)

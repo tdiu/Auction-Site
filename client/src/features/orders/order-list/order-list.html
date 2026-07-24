@@ -1,0 +1,27 @@
+<div class="max-w-[900px] mx-auto p-6">
+  <h1 class="text-3xl font-black text-white italic uppercase mb-6">Your orders</h1>
+
+  @for (o of orders(); track o.orderId) {
+    <a routerLink="/orders/{{ o.orderId }}"
+       class="flex items-center gap-4 bg-[#242424] border border-gray-800 rounded-xl p-4 mb-2 hover:border-gray-700">
+      <div class="flex-1">
+        <div class="text-white font-bold">{{ o.itemName }}</div>
+        <div class="text-gray-500 text-xs">{{ o.createdAt | date:'mediumDate' }} · {{ o.sellerName }}</div>
+      </div>
+      <!-- fixed-width column so badges of different label lengths stay centred in the same lane -->
+      <div class="w-36 flex justify-center">
+        <!-- identical badge markup to the detail page -->
+        <span class="sbadge"
+              [class.is-paid]="o.status === 'Paid'"
+              [class.is-processing]="o.status === 'Pending'"
+              [class.is-failed]="o.status === 'Failed' || o.status === 'Expired'">
+          <span class="pip"></span>{{ o.status }}
+        </span>
+      </div>
+      <div class="text-white font-bold tabular-nums w-32 text-right">{{ o.amount }} CAD</div>
+    </a>
+  } @empty {
+    <p class="text-gray-500">You haven't bought anything yet.</p>
+    <a routerLink="/auctions" class="text-[#ff4742]">Browse auctions</a>
+  }
+</div>

@@ -11,7 +11,8 @@ import {AuctionList} from '../features/auctions/auction-list/auction-list';
 import {AuctionDetailed} from '../features/auctions/auction-detailed/auction-detailed';
 import {Register} from '../features/account/register/register';
 import {Login} from '../features/account/login/login';
-import {OrderConfirmation} from '../features/payments/order-confirmation/order-confirmation';
+import {OrderList} from '../features/orders/order-list/order-list';
+import {OrderDetail} from '../features/orders/order-detail/order-detail';
 
 export const routes: Routes = [
   {path: '', component: Home},
@@ -24,7 +25,8 @@ export const routes: Routes = [
     children: [
       {path: 'sell', component: Sell},
       {path: 'messages', component: Messages},
-      {path: 'auctions/:auctionId/order-confirmation', component: OrderConfirmation},
+      {path: 'orders', component: OrderList},
+      {path: 'orders/:orderId', component: OrderDetail},
     ]
   },
   {path: 'members', component: MemberList},
