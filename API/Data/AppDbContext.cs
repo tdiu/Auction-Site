@@ -77,7 +77,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             .IsUnique();
 
         modelBuilder.Entity<PaymentAttempt>()
-            .HasIndex(a => a.PaymentId)
+            .HasIndex(a => a.PaymentId, "IX_PaymentAttempts_PaymentId_Completed")
             .IsUnique()
             .HasFilter($"\"Status\" = {(int)PaymentAttemptStatus.Completed}");
 
@@ -88,5 +88,12 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             b.Property(m => m.Payload).HasColumnType("jsonb");
             b.HasIndex(m => new { m.VisibleAt, m.CreatedAt }).HasFilter("\"Status\" = 0");
         });
+
+        // Current index keeps at most one Completed attempt. This keeps at most one Pending
+        // Result: a payment has one live session at a time, and one recorded success
+        modelBuilder.Entity<PaymentAttempt>()
+            .HasIndex(a => a.PaymentId, "IX_PaymentAttempts_PaymentId_Pending")
+            .IsUnique()
+            .HasFilter($"\"Status\" = {(int)PaymentAttemptStatus.Pending}");
     }
 }

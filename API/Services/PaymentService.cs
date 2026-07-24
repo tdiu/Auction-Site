@@ -26,8 +26,25 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
             return Result<CreatePaymentResponseDto>.Failure("Invalid user", FailureReason.Forbidden);
 
         var winner = await unitOfWork.Users.GetUserByIdAsync(userId);
-
         var payment = await unitOfWork.Payments.GetByAuctionIdAsync(auctionId);
+
+        // Payment already settled. Refuse before creating anything.
+        if (payment is { Status: PaymentStatus.Paid })
+            return Result<CreatePaymentResponseDto>.Failure("Payment already completed", FailureReason.Conflict);
+
+        var payWindow = configuration.GetValue("Payments:PayWindow", TimeSpan.FromDays(7));
+        var sessionTtl = configuration.GetValue("Payments:SessionTtl", TimeSpan.FromMinutes(60));
+        var deadline = (auction.FinalizedAt ?? auction.EndTime) + payWindow;
+        if (currTime > deadline)
+            return Result<CreatePaymentResponseDto>.Failure("Payment window has closed", FailureReason.Conflict);
+
+        // Reuse a live session instead of creating a new one
+        if (payment != null)
+        {
+            var reuse = await TryReuseOpenSessionAsync(payment, currTime);
+            if (reuse != null)
+                return reuse;
+        }
 
         if (payment == null)
         {
@@ -37,7 +54,8 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                 UserId = userId,
                 Amount = auction.CurrentHighBid.Value,
                 Status = PaymentStatus.Pending,
-                CreatedAt = currTime
+                CreatedAt = currTime,
+                PayableUntil = deadline
             };
 
             unitOfWork.Payments.Add(payment);
@@ -55,25 +73,22 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     return Result<CreatePaymentResponseDto>.Failure("Could not create payment", FailureReason.InternalError);
                 if (payment is { Status: PaymentStatus.Paid })
                     return Result<CreatePaymentResponseDto>.Failure("Payment already completed", FailureReason.Conflict);
+
+                var raced = await TryReuseOpenSessionAsync(payment, currTime);
+                if (raced != null)
+                    return raced;
             }
         }
 
-        var attempt = new PaymentAttempt
-        {
-            PaymentId = payment.PaymentId,
-            Amount = payment.Amount,
-            Status = PaymentAttemptStatus.Pending,
-            CreatedAt = currTime
-        };
-        payment.Attempts.Add(attempt);
-        await unitOfWork.CompleteAsync();
-
-
+        // Create the Stripe session BEFORE persisting the attempt. A Pending attempt then always
+        // carries a session id. Never leaves a Pending/null-session row that the reuse path
+        // can't recover and the Pending unique index would block forever.
         var clientUrl = configuration["ClientAppUrl"];
 
         var options = new SessionCreateOptions
         {
             Mode = "payment",
+            ExpiresAt = (currTime + sessionTtl).UtcDateTime,
             CustomerEmail = string.IsNullOrEmpty(winner?.Email) ? null : winner.Email,
             LineItems =
             [
@@ -90,30 +105,58 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
             ],
             SuccessUrl = $"{clientUrl}/orders/{payment.PaymentId}?session_id={{CHECKOUT_SESSION_ID}}",
             CancelUrl = $"{clientUrl}/auctions/{auctionId}?cancelled=true",
-            ClientReferenceId = attempt.AttemptId.ToString(),
+            // Correlate attemptId on payment. Both fields are write-only
+            // (the webhook looks the attempt up by StripeSessionId), so this is traceability only.
+            ClientReferenceId = payment.PaymentId.ToString(),
             Metadata = new Dictionary<string, string>
             {
                 ["payment_id"] = payment.PaymentId.ToString(),
-                ["attempt_id"] = attempt.AttemptId.ToString(),
                 ["auction_id"] = auctionId.ToString()
             },
         };
 
+        Session session;
         try
         {
-            var session = await stripeClient.V1.Checkout.Sessions.CreateAsync(options,
-                new RequestOptions { IdempotencyKey = $"attempt-{attempt.AttemptId}" });
-
-            attempt.StripeSessionId = session.Id;
-            await unitOfWork.CompleteAsync();
-            return Result<CreatePaymentResponseDto>.Success(new CreatePaymentResponseDto { CheckoutUrl = session.Url, });
+            // Guid idempotency key replaces the old attempt-{id} one: it protects a transport-level
+            // retry of THIS create call without needing a persisted identity first.
+            session = await stripeClient.V1.Checkout.Sessions.CreateAsync(options,
+                new RequestOptions { IdempotencyKey = Guid.NewGuid().ToString() });
         }
         catch (StripeException e)
         {
-            attempt.Status = PaymentAttemptStatus.Failed;
-            await unitOfWork.CompleteAsync();
+            // Nothing persisted yet, so there is no attempt to mark Failed
+            logger.LogWarning(e, "Stripe session creation failed for payment {PaymentId}", payment.PaymentId);
             return Result<CreatePaymentResponseDto>.Failure(e.Message, FailureReason.InternalError);
         }
+
+        var attempt = new PaymentAttempt
+        {
+            PaymentId = payment.PaymentId,
+            Amount = payment.Amount,
+            Status = PaymentAttemptStatus.Pending,
+            StripeSessionId = session.Id,
+            CreatedAt = currTime
+        };
+        payment.Attempts.Add(attempt);
+
+        try
+        {
+            await unitOfWork.CompleteAsync();
+        }
+        catch (DbUpdateException e) when (e.IsUniqueViolation())
+        {
+            // Lost the race for the single open attempt. The session we just created is now an
+            // orphan; it self-expires via ExpiresAt and its expiry webhook finds no attempt. Reuse theirs.
+            payment.Attempts.Remove(attempt);
+            unitOfWork.Payments.Detach(attempt);
+            payment = await unitOfWork.Payments.GetByAuctionIdAsync(auctionId)
+                      ?? throw new InvalidOperationException($"Payment for auction {auctionId} could not be found");
+            return await TryReuseOpenSessionAsync(payment, currTime)
+                ?? Result<CreatePaymentResponseDto>.Failure("Could not start checkout", FailureReason.InternalError);
+        }
+
+        return Result<CreatePaymentResponseDto>.Success(new CreatePaymentResponseDto { CheckoutUrl = session.Url });
     }
 
     public async Task<Result<PaymentStatusDto>> GetPaymentStatus(int auctionId, string userId)
@@ -165,6 +208,11 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                     var attempt = await unitOfWork.Payments.GetAttemptByStripeSessionIdAsync(session.Id);
                     if (attempt == null) return;
 
+                    // No-op for cards as they're paid at completion. Required for async methods
+                    // where "complete" can arrive with funds still unconfirmed
+                    if (session.PaymentStatus is not ("paid" or "no_payment_required"))
+                        return;
+
                     var now = DateTimeOffset.UtcNow;
                     if (attempt.Status != PaymentAttemptStatus.Completed)
                     {
@@ -211,6 +259,58 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
             default:
                 logger.LogDebug("Ignoring unhandled Stripe event type {EventType}", stripeEvent.Type);
                 break;
+        }
+    }
+
+    private async Task<Result<CreatePaymentResponseDto>?> TryReuseOpenSessionAsync(Payment payment, DateTimeOffset now)
+    {
+        var open = payment.Attempts
+            .Where(a => a.Status == PaymentAttemptStatus.Pending && a.StripeSessionId != null)
+            .MaxBy(a => a.CreatedAt);
+
+        if (open == null)
+            return null;
+
+        // Reuse existing stripe session if it exists
+        Session existing;
+        try
+        {
+            existing = await stripeClient.V1.Checkout.Sessions.GetAsync(open.StripeSessionId);
+        }
+        catch (StripeException e)
+        {
+            logger.LogWarning(e, "Could not retrieve session {SessionId} for payment {PaymentId}",
+                open.StripeSessionId, payment.PaymentId);
+            return Result<CreatePaymentResponseDto>.Failure("Could not reach payment provider",
+                FailureReason.InternalError);
+        }
+
+        switch (existing.Status)
+        {
+            case "complete" when existing.PaymentStatus is "paid" or "no_payment_required":
+                open.Status = PaymentAttemptStatus.Completed;
+                open.CompletedAt = now;
+                payment.MarkPaid(now);
+                await unitOfWork.CompleteAsync();
+                return Result<CreatePaymentResponseDto>.Failure("Payment already ccompleted", FailureReason.Conflict);
+
+            // Only reachable with async methods where committed but funds not confirmed received
+            // Let async webhooks resolve
+            case "complete":
+                return Result<CreatePaymentResponseDto>.Failure("Payment is processing", FailureReason.Conflict);
+
+            // Still payable; handle back same URL
+            case "open":
+                return Result<CreatePaymentResponseDto>.Success(new CreatePaymentResponseDto
+                {
+                    CheckoutUrl = existing.Url
+                });
+
+            // Expired. Reap and let the caller create a fresh session
+            default:
+                open.Status = PaymentAttemptStatus.Expired;
+                await unitOfWork.CompleteAsync();
+                return null;
         }
     }
 }

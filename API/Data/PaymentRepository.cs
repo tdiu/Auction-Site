@@ -43,4 +43,5 @@ public class PaymentRepository(AppDbContext context) : IPaymentRepository
     public void Add(Payment payment) => context.Add(payment);
 
     public void Detach(Payment payment) => context.Entry(payment).State = EntityState.Detached;
+    public void Detach(PaymentAttempt attempt) => context.Entry(attempt).State = EntityState.Detached;
 }

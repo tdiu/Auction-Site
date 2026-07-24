@@ -100,12 +100,15 @@ public class PaymentServiceTests
         Assert.Contains("[unit_amount]=15000", body); // 150.00 dollars -> cents (nested form key)
         Assert.Contains("[currency]=cad", body);
         Assert.Contains("metadata[payment_id]=100", body);
-        Assert.Contains("metadata[attempt_id]=500", body);
         Assert.Contains("metadata[auction_id]=1", body);
+        // AttemptId is not known when the session is built (it is created before the attempt is
+        // persisted), so we correlate on the payment instead.
+        Assert.Contains("client_reference_id=100", body);
         // Success lands on the order page, keyed by the freshly assigned PaymentId (100 in this fixture).
         Assert.Contains($"success_url={PaymentTestContext.ClientAppUrl}/orders/100?session_id=", body);
         Assert.Contains($"cancel_url={PaymentTestContext.ClientAppUrl}/auctions/1?cancelled=true", body);
-        Assert.Equal("attempt-500", ctx.Http.LastRequest!.StripeHeaders["Idempotency-Key"]);
+        // Idempotency key is a per-call Guid now, not tied to the (not-yet-assigned) AttemptId.
+        Assert.True(Guid.TryParse(ctx.Http.LastRequest!.StripeHeaders["Idempotency-Key"], out _));
     }
 
     [Fact]
@@ -133,7 +136,7 @@ public class PaymentServiceTests
     }
 
     [Fact]
-    public async Task CreateCheckoutSession_WhenStripeThrows_MarksAttemptFailedAndReturnsInternalError()
+    public async Task CreateCheckoutSession_WhenStripeThrows_ReturnsInternalErrorAndPersistsNoAttempt()
     {
         var ctx = new PaymentTestContext(stripeThrows: new StripeException("card_declined"));
         ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
@@ -143,8 +146,131 @@ public class PaymentServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.InternalError, result.Reason);
-        Assert.Equal(PaymentAttemptStatus.Failed, ctx.AddedPayment!.Attempts.Single().Status);
+        // Session is created before the attempt is persisted, so a Stripe failure leaves no attempt
+        // at all — no Pending/null-session row to strand the payment behind the Pending index.
+        Assert.Empty(ctx.AddedPayment!.Attempts);
         Assert.Equal(PaymentStatus.Pending, ctx.AddedPayment.Status); // never flipped to Paid
+    }
+
+    // ---- r8: reuse-or-refuse (a winner is charged at most once) ----
+
+    // The reported bug: an already-paid payment must be refused before anything is created,
+    // regardless of how the winner re-entered (e.g. clicking the "You won" email link again).
+    [Fact]
+    public async Task CreateCheckoutSession_WhenAlreadyPaid_RefusesWithoutTouchingStripe()
+    {
+        var ctx = new PaymentTestContext();
+        ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(new Payment
+        {
+            PaymentId = 77, AuctionId = 1, UserId = "winner", Amount = 150m, Status = PaymentStatus.Paid
+        });
+
+        var result = await ctx.Service.CreateCheckoutSession(1, "winner");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
+        Assert.Null(ctx.Http.LastRequest);                       // never reached Stripe
+        ctx.PaymentRepo.DidNotReceive().Add(Arg.Any<Payment>());
+    }
+
+    // A live session is reused, not duplicated: the winner gets the same URL back and no second attempt.
+    [Fact]
+    public async Task CreateCheckoutSession_WithOpenSession_ReturnsSameUrlWithoutNewAttempt()
+    {
+        const string openSession =
+            "{\"id\":\"cs_existing\",\"object\":\"checkout.session\",\"status\":\"open\"," +
+            "\"url\":\"https://checkout.stripe.test/pay/cs_existing\"}";
+        var ctx = new PaymentTestContext(stripeResponseJson: openSession);
+        ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
+        var payment = PendingPaymentWithSession("cs_existing");
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(payment);
+
+        var result = await ctx.Service.CreateCheckoutSession(1, "winner");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("https://checkout.stripe.test/pay/cs_existing", result.Value!.CheckoutUrl);
+        Assert.Single(payment.Attempts);                         // reused, not a fresh attempt
+        ctx.PaymentRepo.DidNotReceive().Add(Arg.Any<Payment>());
+    }
+
+    // Closes the webhook-lag race: our row still says Pending, but Stripe's session is complete/paid,
+    // and Stripe is authoritative — so we mark paid and refuse rather than opening a second session.
+    [Fact]
+    public async Task CreateCheckoutSession_WhenExistingSessionAlreadyPaid_MarksPaidAndRefuses()
+    {
+        const string paidSession =
+            "{\"id\":\"cs_done\",\"object\":\"checkout.session\",\"status\":\"complete\"," +
+            "\"payment_status\":\"paid\",\"url\":\"https://checkout.stripe.test/pay/cs_done\"}";
+        var ctx = new PaymentTestContext(stripeResponseJson: paidSession);
+        ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
+        var payment = PendingPaymentWithSession("cs_done");
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(payment);
+
+        var result = await ctx.Service.CreateCheckoutSession(1, "winner");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
+        Assert.Equal(PaymentStatus.Paid, payment.Status);
+        Assert.Equal(PaymentAttemptStatus.Completed, payment.Attempts.Single().Status);
+    }
+
+    // Fail closed: if we can't reach Stripe to check the existing session, never fall through to
+    // minting a second one.
+    [Fact]
+    public async Task CreateCheckoutSession_WhenSessionLookupFails_FailsClosedWithoutNewAttempt()
+    {
+        var ctx = new PaymentTestContext(stripeThrows: new StripeException("stripe unavailable"));
+        ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
+        var payment = PendingPaymentWithSession("cs_x");
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(payment);
+
+        var result = await ctx.Service.CreateCheckoutSession(1, "winner");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.InternalError, result.Reason);
+        Assert.Single(payment.Attempts);                         // no second attempt
+        ctx.PaymentRepo.DidNotReceive().Add(Arg.Any<Payment>());
+    }
+
+    // An expired session is reaped and a fresh one minted — the winner can still pay within the window.
+    [Fact]
+    public async Task CreateCheckoutSession_WhenExistingSessionExpired_MintsFreshSession()
+    {
+        const string expiredSession =
+            "{\"id\":\"cs_old\",\"object\":\"checkout.session\",\"status\":\"expired\"," +
+            "\"url\":\"https://checkout.stripe.test/pay/cs_old\"}";
+        var ctx = new PaymentTestContext(stripeResponseJson: expiredSession);
+        ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
+        var payment = PendingPaymentWithSession("cs_old");
+        ctx.TrackForIdAssignment(payment);
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(payment);
+
+        var result = await ctx.Service.CreateCheckoutSession(1, "winner");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, payment.Attempts.Count);
+        Assert.Contains(payment.Attempts, a => a.Status == PaymentAttemptStatus.Expired);
+        Assert.Contains(payment.Attempts, a => a.Status == PaymentAttemptStatus.Pending);
+        ctx.PaymentRepo.DidNotReceive().Add(Arg.Any<Payment>());
+    }
+
+    // Past the pay window (auction ended > 7 days ago), refuse before any Stripe call.
+    [Fact]
+    public async Task CreateCheckoutSession_AfterPayWindowClosed_ReturnsConflict()
+    {
+        var ctx = new PaymentTestContext();
+        var auction = EndedAuction("winner", 150m);
+        auction.EndTime = DateTimeOffset.UtcNow.AddDays(-8);      // default 7-day window elapsed
+        ctx.AuctionRepo.GetAuctionAsync(1).Returns(auction);
+        ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns((Payment?)null);
+
+        var result = await ctx.Service.CreateCheckoutSession(1, "winner");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
+        Assert.Null(ctx.Http.LastRequest);
+        ctx.PaymentRepo.DidNotReceive().Add(Arg.Any<Payment>());
     }
 
     // ---- GetPaymentStatus ----
@@ -371,6 +497,30 @@ public class PaymentServiceTests
             });
         }
 
+        return payment;
+    }
+
+    // A Pending payment whose latest attempt already carries a Stripe session id — the state the
+    // reuse path inspects. status lets a test stage an Expired attempt instead of Pending.
+    private static Payment PendingPaymentWithSession(
+        string sessionId, PaymentAttemptStatus status = PaymentAttemptStatus.Pending)
+    {
+        var payment = new Payment
+        {
+            PaymentId = 77,
+            AuctionId = 1,
+            UserId = "winner",
+            Amount = 150m,
+            Status = PaymentStatus.Pending
+        };
+        payment.Attempts.Add(new PaymentAttempt
+        {
+            PaymentId = 77,
+            Amount = 150m,
+            Status = status,
+            StripeSessionId = sessionId,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
         return payment;
     }
 }

@@ -20,6 +20,13 @@ public class AuctionEndedHandler(
 
         var winner = await unitOfWork.Users.GetUserByIdAsync(payload.WinnerId)
             ?? throw new InvalidOperationException($"Winner {payload.WinnerId} does not exist");
+
+        // A Buy Now buyer who already paid shouldn't get an email asking for payment
+        // Correctness guarantee handled in CreateCheckoutSession
+        var payment = await unitOfWork.Payments.GetByAuctionIdAsync(payload.AuctionId);
+        if (payment is { Status: PaymentStatus.Paid })
+            return;
+
         if (string.IsNullOrEmpty(winner.Email))
             throw new InvalidOperationException($"Winner {payload.WinnerId} has no email");
 

@@ -12,4 +12,5 @@ public interface IPaymentRepository
 
     /// <summary>Stop tracking a payment (e.g. an insert that failed a unique-violation) so a later save won't retry it.</summary>
     void Detach(Payment payment);
+    void Detach(PaymentAttempt attempt);
 }

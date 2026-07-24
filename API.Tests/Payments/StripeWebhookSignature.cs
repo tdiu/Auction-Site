@@ -18,7 +18,7 @@ public static class StripeWebhookSignature
     }
 
     public static string CompletedEventJson(string sessionId) =>
-        EventJson("checkout.session.completed", sessionId);
+        EventJson("checkout.session.completed", sessionId, paymentStatus: "paid");
 
     public static string ExpiredEventJson(string sessionId) =>
         EventJson("checkout.session.expired", sessionId);
@@ -32,13 +32,18 @@ public static class StripeWebhookSignature
     // EventUtility.ConstructEvent throws while checking version compatibility.
     private const string ApiVersion = "2026-06-24.dahlia";
 
-    public static string EventJson(string type, string sessionId, string objectType = "checkout.session") => $$"""
+    public static string EventJson(string type, string sessionId, string objectType = "checkout.session",
+        string? paymentStatus = null)
+    {
+        var paymentStatusField = paymentStatus == null ? "" : $", \"payment_status\": \"{paymentStatus}\"";
+        return $$"""
         {
           "id": "evt_test_{{Guid.NewGuid():N}}",
           "object": "event",
           "api_version": "{{ApiVersion}}",
           "type": "{{type}}",
-          "data": { "object": { "id": "{{sessionId}}", "object": "{{objectType}}" } }
+          "data": { "object": { "id": "{{sessionId}}", "object": "{{objectType}}"{{paymentStatusField}} } }
         }
         """;
+    }
 }

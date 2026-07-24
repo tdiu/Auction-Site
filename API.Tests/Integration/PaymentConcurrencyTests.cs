@@ -90,8 +90,11 @@ public class PaymentConcurrencyTests(PostgresFixture fixture)
 
     // ---- helpers ----
 
+    // status:"open" mirrors a live session: the racer that loses the attempt-insert reuses the
+    // winner's session via Sessions.Get, and an open session is what makes reuse hand back a URL
+    // instead of treating it as expired.
     private static string SessionJson(string id) =>
-        $"{{\"id\":\"{id}\",\"object\":\"checkout.session\",\"url\":\"https://checkout.stripe.test/pay/{id}\"}}";
+        $"{{\"id\":\"{id}\",\"object\":\"checkout.session\",\"status\":\"open\",\"url\":\"https://checkout.stripe.test/pay/{id}\"}}";
 
     private async Task<int> SeedEndedAuctionAsync()
     {

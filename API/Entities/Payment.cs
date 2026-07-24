@@ -11,6 +11,7 @@ public class Payment
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+    public DateTimeOffset? PayableUntil { get; set; }
     public ICollection<PaymentAttempt> Attempts { get; set; } = new List<PaymentAttempt>();
 
     // nav props
