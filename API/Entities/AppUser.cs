@@ -6,9 +6,6 @@ namespace API.Entities;
 public class AppUser : IdentityUser
 {
     public required string DisplayName { get; set; }
-
-    public string? RefreshToken { get; set; }
-    public DateTime? RefreshTokenExpiry { get; set; }
     public string? ImageUrl { get; set; }
     public DateOnly DateOfBirth { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -24,4 +21,7 @@ public class AppUser : IdentityUser
 
     [JsonIgnore]
     public List<Message> MessagesReceived { get; set; } = [];
+
+    [JsonIgnore]
+    public ICollection<RefreshSession> RefreshSessions { get; set; } = [];
 }

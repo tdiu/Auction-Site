@@ -13,6 +13,7 @@ public class UnitOfWork : IUnitOfWork
     private readonly IPaymentRepository _paymentRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IOutboxRepository _outboxRepository;
+    private readonly IRefreshSessionRepository _refreshSessionRepository;
 
 
     public UnitOfWork(
@@ -22,7 +23,8 @@ public class UnitOfWork : IUnitOfWork
         IBidRepository bidRepository,
         IPaymentRepository paymentRepository,
         IMessageRepository messageRepository,
-        IOutboxRepository outboxRepository)
+        IOutboxRepository outboxRepository,
+        IRefreshSessionRepository refreshSessionRepository)
     {
         this._context = context;
         this._userRepository = userRepository;
@@ -31,6 +33,7 @@ public class UnitOfWork : IUnitOfWork
         this._paymentRepository = paymentRepository;
         this._messageRepository = messageRepository;
         this._outboxRepository = outboxRepository;
+        this._refreshSessionRepository = refreshSessionRepository;
     }
 
     public IAuctionRepository Auctions => _auctionRepository;
@@ -39,6 +42,7 @@ public class UnitOfWork : IUnitOfWork
     public IPaymentRepository Payments => _paymentRepository;
     public IMessageRepository Messages => _messageRepository;
     public IOutboxRepository Outbox => _outboxRepository;
+    public IRefreshSessionRepository RefreshSessions => _refreshSessionRepository;
 
     public async Task<bool> CompleteAsync() => await _context.SaveChangesAsync() > 0;
 

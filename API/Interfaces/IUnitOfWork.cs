@@ -10,6 +10,7 @@ public interface IUnitOfWork : IDisposable
     IPaymentRepository Payments { get; }
     IMessageRepository Messages { get; }
     IOutboxRepository Outbox { get; }
+    IRefreshSessionRepository RefreshSessions { get; }
     Task<bool> CompleteAsync();
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct);
 }

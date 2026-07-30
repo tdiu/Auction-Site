@@ -64,8 +64,12 @@ public class AccountController(IAuthService authService) : BaseApiController
     }
 
 
-    private void SetRefreshTokenCookie(string refreshToken, DateTime expires)
+    private void SetRefreshTokenCookie(string? refreshToken, DateTimeOffset? expires)
     {
+        // Grace path returns an access token with no successor. The winning tab already wrote the
+        // live cookie into the shared jar, so overwriting or clearing it here would break that tab
+        if (string.IsNullOrEmpty(refreshToken) || expires is null) return;
+
         Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
         {
             HttpOnly = true,

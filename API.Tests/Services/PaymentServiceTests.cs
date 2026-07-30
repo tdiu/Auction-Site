@@ -163,7 +163,11 @@ public class PaymentServiceTests
         ctx.AuctionRepo.GetAuctionAsync(1).Returns(EndedAuction("winner", 150m));
         ctx.PaymentRepo.GetByAuctionIdAsync(1).Returns(new Payment
         {
-            PaymentId = 77, AuctionId = 1, UserId = "winner", Amount = 150m, Status = PaymentStatus.Paid
+            PaymentId = 77,
+            AuctionId = 1,
+            UserId = "winner",
+            Amount = 150m,
+            Status = PaymentStatus.Paid
         });
 
         var result = await ctx.Service.CreateCheckoutSession(1, "winner");

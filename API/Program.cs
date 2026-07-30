@@ -46,6 +46,7 @@ builder.Services.AddScoped<IBidService, BidService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
+builder.Services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>();
 builder.Services.AddScoped<IOutboxHandler, PaymentCompletedHandler>();
 builder.Services.AddScoped<IOutboxHandler, AuctionEndedHandler>();
 builder.Services.AddScoped<AuctionSettlementJob>();

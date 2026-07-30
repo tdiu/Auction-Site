@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
     public DbSet<Payment> Payments { get; set; }
     public DbSet<PaymentAttempt> PaymentAttempts { get; set; }
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
+    public DbSet<RefreshSession> RefreshSessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -95,5 +96,29 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             .HasIndex(a => a.PaymentId, "IX_PaymentAttempts_PaymentId_Pending")
             .IsUnique()
             .HasFilter($"\"Status\" = {(int)PaymentAttemptStatus.Pending}");
+
+        modelBuilder.Entity<RefreshSession>(b =>
+        {
+            // Every lookup is by presented token and must be unambiguous
+            b.HasIndex(s => s.TokenHash).IsUnique();
+
+            // Revoke-all. Reuse cascade, password reset, sessions page
+            b.HasIndex(s => s.UserId);
+
+            // Sweep's WHERE clause
+            b.HasIndex(s => s.ExpiresAt);
+            b.Property(s => s.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            b.HasOne(s => s.User)
+                .WithMany(u => u.RefreshSessions)
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Sweep deletes expired rows in bulk and must not be blocked by predecessor still pointing at one
+            // Losing link on dead row costs nothing
+            b.HasOne(s => s.ReplacedBy)
+                .WithMany()
+                .HasForeignKey(s => s.ReplacedById)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
     }
 }
