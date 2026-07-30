@@ -1,7 +1,7 @@
 import {inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {LoginCreds, RegisterCreds, User} from '../../types/user';
-import {finalize, tap} from 'rxjs';
+import {defer, finalize, firstValueFrom, from, Observable, tap} from 'rxjs';
 import {environment} from '../../environments/environment';
 import {PresenceService} from './presence-service';
 
@@ -13,6 +13,13 @@ export class AccountService {
   private readonly currentUserSignal = signal<User | null>(null);
   readonly currentUser = this.currentUserSignal.asReadonly();
   private presenceService = inject(PresenceService);
+  private serialised<T>(work: () => Observable<T>): Observable<T> {
+    if (!navigator.locks) return work();
+    return defer(() =>
+      from(navigator.locks
+        .request<Promise<T>>('auth-refresh', () => firstValueFrom(work()))
+        .then(value => value)));
+  }
 
   private baseUrl = environment.apiUrl;
 
@@ -40,15 +47,17 @@ export class AccountService {
     )
   }
 
-  refreshToken(){
-    return this.http.post<User | null>(`${this.baseUrl}/account/refresh-token`, {}, {
-      withCredentials: true
-    }).pipe(
-      tap(user => {
-        if (user) {
-          this.setCurrentUser(user)
-        }
-      })
+  refreshToken() {
+    return this.serialised(() =>
+      this.http.post<User | null>(`${this.baseUrl}/account/refresh-token`, {}, {
+        withCredentials: true
+      }).pipe(
+        tap(user => {
+          if (user) {
+            this.setCurrentUser(user)
+          }
+        })
+      )
     );
   }
 

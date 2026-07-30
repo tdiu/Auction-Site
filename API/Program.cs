@@ -50,6 +50,7 @@ builder.Services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>(
 builder.Services.AddScoped<IOutboxHandler, PaymentCompletedHandler>();
 builder.Services.AddScoped<IOutboxHandler, AuctionEndedHandler>();
 builder.Services.AddScoped<AuctionSettlementJob>();
+builder.Services.AddScoped<SessionSweepJob>();
 builder.Services.AddScoped<OutboxDispatcher>();
 builder.Services.AddScoped<IEmailTemplateRenderer, RazorEmailTemplateRenderer>();
 builder.Services.AddRazorTemplating();
@@ -192,6 +193,10 @@ try
         "outbox-dispatch",
         d => d.DispatchAsync(CancellationToken.None),
         builder.Configuration["Outbox:DispatchCron"] ?? Cron.Minutely());
+    recurring.AddOrUpdate<SessionSweepJob>(
+        "session-sweep",
+        j => j.RunAsync(CancellationToken.None),
+        builder.Configuration["Session:SweepCron"] ?? Cron.Minutely());
 }
 catch (Exception ex)
 {

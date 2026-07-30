@@ -12,7 +12,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
 {
     private const int RefreshTokenLifetimeDays = 7;
     private static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(15);
-    public async Task<Result<AuthResult>> RegisterAsync(RegisterDto registerDto)
+    public async Task<Result<AuthResult>> RegisterAsync(RegisterDto registerDto, string? userAgent = null)
     {
         var displayName = registerDto.DisplayName.Trim();
         var email = registerDto.Email.Trim();
@@ -38,10 +38,10 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         if (!res.Succeeded)
             return Result<AuthResult>.ValidationFailure(MapIdentityErrors(res.Errors));
 
-        return await IssueAuthTokenAsync(user);
+        return await IssueAuthTokenAsync(user, userAgent);
     }
 
-    public async Task<Result<AuthResult>> LoginAsync(LoginDto loginDto)
+    public async Task<Result<AuthResult>> LoginAsync(LoginDto loginDto, string? userAgent = null)
     {
         var email = loginDto.Email.Trim();
         var user = await userManager.FindByEmailAsync(email);
@@ -52,7 +52,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         if (!valid)
             return Result<AuthResult>.Failure("Invalid Credentials", FailureReason.Unauthorized);
 
-        return await IssueAuthTokenAsync(user);
+        return await IssueAuthTokenAsync(user, userAgent);
     }
 
     public async Task<Result<bool>> LogoutAsync(string? refreshToken, CancellationToken ct)
@@ -100,6 +100,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
             }, token);
     }
 
+    // Rotate token
     public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken, string? userAgent = null, CancellationToken ct = default)
     {
         var session = await unitOfWork.RefreshSessions.GetByTokenHashAsync(tokenService.HashRefreshToken(refreshToken), ct);
@@ -109,6 +110,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
 
         var now = DateTimeOffset.UtcNow;
 
+        // Handle revoked session
         if (session.RevokedAt is not null)
             return await HandleReplayAsync(session.Id, now, ct);
 
@@ -119,6 +121,9 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         if (user == null)
             return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
 
+        // A long refresh chain must not let someone refresh their way through a lockout
+        // End all sessions instead of refusing this one
+        // If an account is locked, the credentials behind it are in question too
         if (await userManager.IsLockedOutAsync(user))
         {
             await unitOfWork.RefreshSessions.RevokeAllForUserAsync(
@@ -126,10 +131,14 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
             return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
         }
 
+        // Initiate lock and claim rotation
+        // Both writes go under a single transaction to avoid failure in between leaving predecessor ReplaceById empty
         await using var tx = await unitOfWork.BeginTransactionAsync(ct);
 
         if (!await unitOfWork.RefreshSessions.TryMarkRotatedAsync(session.Id, now, ct))
         {
+            // Lost race, another caller rotated this row. Roll back and take same path as a late replay
+            // Find live successor and serve an access token from grace branch
             await tx.RollbackAsync(ct);
             return await HandleReplayAsync(session.Id, now, ct);
         }
@@ -145,6 +154,8 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
             user.ToDto(tokenService.CreateToken(user)), token, successor.ExpiresAt));
     }
 
+    // Takes an id instead of entity. Can be reached in two ways: from token already revoked when it was read
+    // and from losing the rotation race
     private async Task<Result<AuthResult>> HandleReplayAsync(int sessionId, DateTimeOffset now, CancellationToken ct)
     {
         var session = await unitOfWork.RefreshSessions.ReloadAsync(sessionId, ct);

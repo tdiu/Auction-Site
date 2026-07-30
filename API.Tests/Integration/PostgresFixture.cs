@@ -30,6 +30,9 @@ public class PostgresFixture : IAsyncLifetime
 
     public async ValueTask DisposeAsync() => await _container.DisposeAsync();
 
+    /// <summary>For tests that need to stand up their own DI stack over the same database.</summary>
+    public string ConnectionString => _container.GetConnectionString();
+
     public AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -48,7 +51,8 @@ public class PostgresFixture : IAsyncLifetime
             Substitute.For<IBidRepository>(),
             new PaymentRepository(db),
             Substitute.For<IMessageRepository>(),
-            new OutboxRepository(db));
+            new OutboxRepository(db),
+            new RefreshSessionRepository(db));
 
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>

@@ -12,14 +12,6 @@ namespace API.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "RefreshToken",
-                table: "AspNetUsers");
-
-            migrationBuilder.DropColumn(
-                name: "RefreshTokenExpiry",
-                table: "AspNetUsers");
-
             migrationBuilder.CreateTable(
                 name: "RefreshSessions",
                 columns: table => new
@@ -72,6 +64,26 @@ namespace API.Data.Migrations
                 name: "IX_RefreshSessions_UserId",
                 table: "RefreshSessions",
                 column: "UserId");
+
+            // Hand-written, and it must sit between the table creation and the column drops. Carries
+            // live sessions across so the deploy does not log everyone out: the old column already
+            // holds the same HMAC and RefreshTokenKey is unchanged, so cookies already in browsers
+            // keep working. Rows land un-revoked with no predecessor, which is what a login produces.
+            migrationBuilder.Sql("""
+                INSERT INTO "RefreshSessions" ("UserId", "TokenHash", "CreatedAt", "ExpiresAt")
+                SELECT "Id", "RefreshToken", CURRENT_TIMESTAMP, "RefreshTokenExpiry"
+                FROM "AspNetUsers"
+                WHERE "RefreshToken" IS NOT NULL
+                  AND "RefreshTokenExpiry" > CURRENT_TIMESTAMP;
+                """);
+
+            migrationBuilder.DropColumn(
+                name: "RefreshToken",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "RefreshTokenExpiry",
+                table: "AspNetUsers");
         }
 
         /// <inheritdoc />

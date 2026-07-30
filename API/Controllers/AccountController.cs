@@ -1,3 +1,4 @@
+using API.Core;
 using API.DTOs;
 using API.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ public class AccountController(IAuthService authService) : BaseApiController
     [HttpPost("register")] // api/account/register
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
-        var result = await authService.RegisterAsync(registerDto);
+        var result = await authService.RegisterAsync(registerDto, Request.Headers.UserAgent);
         if (!result.IsSuccess)
             return HandleFailure(result);
 
@@ -23,7 +24,7 @@ public class AccountController(IAuthService authService) : BaseApiController
     [HttpPost("login")] // api/account/login
     public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
     {
-        var result = await authService.LoginAsync(loginDto);
+        var result = await authService.LoginAsync(loginDto, Request.Headers.UserAgent);
         if (!result.IsSuccess)
             return HandleFailure(result);
 
@@ -55,10 +56,18 @@ public class AccountController(IAuthService authService) : BaseApiController
         if (string.IsNullOrEmpty(refreshToken))
             return NoContent();
 
-        var result = await authService.RefreshTokenAsync(refreshToken);
-        if (!result.IsSuccess)
-            return HandleFailure(result);
+        var result = await authService.RefreshTokenAsync(refreshToken, Request.Headers.UserAgent);
 
+        if (!result.IsSuccess)
+        {
+            // Cookie is expired, revoked, or cascaded
+            // Leaving it means every subsequent boot replays and re-triggers the same path
+            if (result.Reason == FailureReason.Unauthorized)
+                DeleteRefreshTokenCookie();
+            return HandleFailure(result);
+        }
+
+        // Both null on the grace path, which SetRefreshTokenCookie treats as "leave the jar alone"
         SetRefreshTokenCookie(result.Value!.RefreshToken, result.Value.RefreshTokenExpiry);
         return Ok(result.Value.User);
     }

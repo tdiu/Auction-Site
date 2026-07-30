@@ -168,6 +168,7 @@ public class OutboxConcurrencyTests(PostgresFixture fixture)
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         // The handler now sends a receipt too; stub the mail seams so dispatch stays DB-only.
         services.AddScoped<IEmailSender>(_ => Substitute.For<IEmailSender>());

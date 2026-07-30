@@ -28,7 +28,8 @@ public class AuctionSettlementJobIntegrationTests(PostgresFixture fixture)
             Substitute.For<IBidRepository>(),
             new PaymentRepository(db),
             new MessageRepository(db),
-            new OutboxRepository(db));
+            new OutboxRepository(db),
+            new RefreshSessionRepository(db));
         return new AuctionSettlementJob(uow, new ConfigurationBuilder().Build(),
             NullLogger<AuctionSettlementJob>.Instance);
     }
