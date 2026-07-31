@@ -496,3 +496,6 @@ API/auction.db*
 # Misc
 /TESTING.md
 /docs/*
+
+# Pending review before it goes in
+/README.md

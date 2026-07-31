@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "Microsoft.AspNetCore.Authentication.Google": {
+        "type": "Direct",
+        "requested": "[10.0.10, )",
+        "resolved": "10.0.10",
+        "contentHash": "9jjUYgbZE7z9YSNpgYbU5L6cUHHhzfT6RUT00euTXA3HAxo5nJjqc2YTx1qj2Z+f30fVmjx9uG3YgISw5oMC2w=="
+      },
       "Microsoft.EntityFrameworkCore.InMemory": {
         "type": "Direct",
         "requested": "[10.0.8, )",
@@ -712,6 +718,7 @@
           "Hangfire.AspNetCore": "[1.8.23, )",
           "Hangfire.PostgreSql": "[1.21.1, )",
           "MailKit": "[4.17.0, )",
+          "Microsoft.AspNetCore.Authentication.Google": "[10.0.10, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.3, )",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.5, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.1, )",

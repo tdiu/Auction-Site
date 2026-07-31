@@ -7,7 +7,7 @@ namespace API.Extensions;
 
 public static class AppUserExtensions
 {
-    public static UserDto ToDto(this AppUser user, string token)
+    public static UserDto ToDto(this AppUser user, string token, string? externalProvider)
     {
         return new UserDto
         {
@@ -15,7 +15,8 @@ public static class AppUserExtensions
             DisplayName = user.DisplayName,
             Email = user.Email!,
             ImageUrl = user.ImageUrl,
-            Token = token
+            Token = token,
+            AuthProvider = externalProvider ?? "password"
         };
     }
 

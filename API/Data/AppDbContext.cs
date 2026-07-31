@@ -43,6 +43,11 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
             .IsUnique();
 
         modelBuilder.Entity<AppUser>()
+            .HasIndex(u => u.NormalizedEmail)
+            .IsUnique()
+            .HasDatabaseName("EmailIndex");
+
+        modelBuilder.Entity<AppUser>()
             .Property(u => u.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 

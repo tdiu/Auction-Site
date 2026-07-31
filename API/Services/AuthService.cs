@@ -80,8 +80,18 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         unitOfWork.RefreshSessions.Add(session);
         await unitOfWork.CompleteAsync();
 
-        return Result<AuthResult>.Success(new AuthResult(user.ToDto(tokenService.CreateToken(user)), refreshToken,
+        return Result<AuthResult>.Success(new AuthResult(await BuildUserDtoAsync(user), refreshToken,
             session.ExpiresAt));
+    }
+
+    // AspNetUserLogins is the source of truth for how an account signs in, so the provider is read
+    // rather than inferred from a null PasswordHash. Without account linking a user has at most one,
+    // and no row at all means they registered with a password.
+    private async Task<UserDto> BuildUserDtoAsync(AppUser user)
+    {
+        var provider = (await userManager.GetLoginsAsync(user)).FirstOrDefault()?.LoginProvider;
+
+        return user.ToDto(tokenService.CreateToken(user), provider);
     }
 
     private (RefreshSession Session, string Token) NewSession(string userId, string? userAgent)
@@ -151,7 +161,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         await tx.CommitAsync(ct);
 
         return Result<AuthResult>.Success(new AuthResult(
-            user.ToDto(tokenService.CreateToken(user)), token, successor.ExpiresAt));
+            await BuildUserDtoAsync(user), token, successor.ExpiresAt));
     }
 
     // Takes an id instead of entity. Can be reached in two ways: from token already revoked when it was read
@@ -187,7 +197,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
             // Access token only. No rotation, nothing revoked, and no refresh token
             // Winning response already wrote live cookie into the jar this caller shares
             return Result<AuthResult>.Success(
-                new AuthResult(user.ToDto(tokenService.CreateToken(user)), null, null));
+                new AuthResult(await BuildUserDtoAsync(user), null, null));
         }
 
         // Logged-out or already cascaded token has no live chain. Revoking other sessions would punish them

@@ -11,4 +11,6 @@ public class UserDto
     public string? ImageUrl { get; set; }
 
     public required string Token { get; set; }
+
+    public required string AuthProvider { get; set; }
 }
