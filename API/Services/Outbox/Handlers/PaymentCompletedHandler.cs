@@ -1,62 +1,32 @@
 using System.Text.Json;
 using API.Entities;
 using API.Interfaces;
-using API.Services.Email.Models;
 
 namespace API.Services.Outbox.Handlers;
 
-public class PaymentCompletedHandler(
-    IUnitOfWork unitOfWork,
-    IEmailSender emailSender,
-    IEmailTemplateRenderer templateRenderer,
-    IConfiguration config,
-    ILogger<PaymentCompletedHandler> logger) : IOutboxHandler
+/// <summary>
+/// Seller-side half of a completed payment: the in-app "payment received" notification, and nothing
+/// else. The buyer's receipt is <see cref="PaymentReceiptHandler"/>, on its own outbox row, so a mail
+/// outage retries only the receipt instead of dead-lettering this notification alongside it.
+/// </summary>
+public class PaymentCompletedHandler(IUnitOfWork unitOfWork) : IOutboxHandler
 {
     public string Type => "PaymentCompleted";
 
-    public async Task Handle(OutboxMessage message, CancellationToken ct)
+    public Task Handle(OutboxMessage message, CancellationToken ct)
     {
-        var p = JsonSerializer.Deserialize<PaymentCompletedPayload>(message.Payload)
-                ?? throw new InvalidOperationException("Malformed PaymentCompleted payload");
+        var payload = JsonSerializer.Deserialize<PaymentCompletedPayload>(message.Payload)
+            ?? throw new InvalidOperationException("Malformed paymentcompleted payload");
 
-        // Unchanged: the seller's in-app notification, deterministic id intact.
         unitOfWork.Messages.AddMessage(new Message
         {
-            Id = $"payment-completed-{p.PaymentId}",
-            SenderId = p.BuyerId,
-            RecipientId = p.SellerId,
-            Content = $"Payment received for \"{p.ItemName}\".",
-            MessageSent = DateTime.UtcNow
+            Id = $"payment-completed-{payload.PaymentId}",
+            SenderId = payload.BuyerId,
+            RecipientId = payload.SellerId,
+            Content = $"payment received for \"{payload.ItemName}\".",
+            MessageSent = DateTimeOffset.UtcNow
         });
 
-        var payment = await unitOfWork.Payments.GetByIdAsync(p.PaymentId)
-                      ?? throw new InvalidOperationException($"Payment {p.PaymentId} missing for receipt");
-
-        var buyer = await unitOfWork.Users.GetUserByIdAsync(p.BuyerId)
-                    ?? throw new InvalidOperationException($"Buyer {p.BuyerId} does not exist");
-
-        // Deliberately NOT a throw, unlike AuctionEndedHandler. There the email is the whole
-        // point of the handler; here it is one of two side effects, and a buyer with no address
-        // must not cost the seller their notification on every retry until the row is reaped.
-        if (string.IsNullOrEmpty(buyer.Email))
-        {
-            logger.LogWarning("Buyer {BuyerId} has no email; skipping receipt for payment {PaymentId}",
-                p.BuyerId, p.PaymentId);
-            return;
-        }
-
-        var body = await templateRenderer.RenderAsync("Receipt", new ReceiptEmailModel(
-            p.PaymentId, p.ItemName, payment.Auction.Seller.DisplayName, payment.Amount,
-            payment.CompletedAt ?? DateTimeOffset.UtcNow,
-            $"{config["ClientAppUrl"]}/orders/{p.PaymentId}"), ct);
-
-        // The outbox is at-least-once: a redelivered row must not send a second receipt. Same shape
-        // as auction-won-{id}, which the mail layer dedupes on as the SMTP MessageId.
-        await emailSender.SendAsync(
-            buyer.Email,
-            $"Receipt for \"{p.ItemName}\"",
-            body,
-            idempotencyKey: $"payment-receipt-{p.PaymentId}",
-            ct);
+        return Task.CompletedTask;
     }
 }

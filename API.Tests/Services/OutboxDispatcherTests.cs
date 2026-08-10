@@ -31,11 +31,15 @@ public class OutboxDispatcherTests
     /// and whose claim/reap repository is <paramref name="repo"/>. Registered as singletons so every
     /// scope (process, then the fresh failure/mark scope) sees the same substitutes and their mutations.
     /// </summary>
-    private static OutboxDispatcher Build(IUnitOfWork uow, IOutboxRepository repo, IOutboxHandler handler, int maxAttempts)
+    private static OutboxDispatcher Build(IUnitOfWork uow, IOutboxRepository repo, IOutboxHandler handler, int maxAttempts) =>
+        Build(uow, repo, maxAttempts, handler);
+
+    /// <summary>Multi-handler overload: the dispatcher matches each claimed row to one by Type.</summary>
+    private static OutboxDispatcher Build(IUnitOfWork uow, IOutboxRepository repo, int maxAttempts, params IOutboxHandler[] handlers)
     {
         var services = new ServiceCollection();
         services.AddSingleton(uow);
-        services.AddSingleton(handler);
+        foreach (var handler in handlers) services.AddSingleton(handler);
         var sp = services.BuildServiceProvider();
 
         var config = new ConfigurationBuilder()
@@ -66,6 +70,62 @@ public class OutboxDispatcherTests
 
     private static StubHandler Throwing(string type, Exception ex) =>
         new(type, () => Task.FromException(ex));
+
+    private static StubHandler Succeeding(string type) =>
+        new(type, () => Task.CompletedTask);
+
+    [Fact]
+    public async Task A_failing_receipt_row_does_not_hold_back_the_notification_row()
+    {
+        // The reason PaymentCompleted and PaymentReceipt are two rows rather than one handler doing
+        // both. A payment writes both in the same commit; here the mail transport is down, so the
+        // receipt handler throws on every attempt. The seller's notification must still be delivered
+        // and marked Processed. Combined, the throw would discard the staged Message with it, and
+        // eight such attempts would dead-letter the notification for a reason that has nothing to
+        // do with it.
+        var notification = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            Type = "PaymentCompleted",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 1
+        };
+        var receipt = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            Type = "PaymentReceipt",
+            Payload = "{}",
+            CreatedAt = default,
+            VisibleAt = default,
+            Attempts = 1
+        };
+
+        var repo = Substitute.For<IOutboxRepository>();
+        repo.ClaimAndLeaseAsync(Arg.Any<int>(), Arg.Any<TimeSpan>(), Arg.Any<int>())
+            .Returns([notification.Id, receipt.Id]);
+        repo.GetAsync(notification.Id).Returns(notification);
+        repo.GetAsync(receipt.Id).Returns(receipt);
+
+        var uow = Substitute.For<IUnitOfWork>();
+        uow.Outbox.Returns(repo);
+        uow.CompleteAsync().Returns(true);
+
+        var dispatcher = Build(uow, repo, maxAttempts: 8,
+            Succeeding("PaymentCompleted"),
+            Throwing("PaymentReceipt", new InvalidOperationException("smtp unreachable")));
+
+        await dispatcher.DispatchAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(OutboxMessageStatus.Processed, notification.Status);
+        Assert.NotNull(notification.ProcessedAt);
+        Assert.Null(notification.LastError);
+
+        Assert.Equal(OutboxMessageStatus.Pending, receipt.Status);   // retries on its own
+        Assert.NotNull(receipt.LastError);
+        Assert.True(receipt.VisibleAt > DateTimeOffset.UtcNow);      // backed off, alone
+    }
 
     [Fact]
     public async Task Backs_off_and_stays_pending_when_handler_throws()

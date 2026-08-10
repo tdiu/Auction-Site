@@ -50,6 +50,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IRefreshSessionRepository, RefreshSessionRepository>();
 builder.Services.AddScoped<IOutboxHandler, PaymentCompletedHandler>();
+builder.Services.AddScoped<IOutboxHandler, PaymentReceiptHandler>();
 builder.Services.AddScoped<IOutboxHandler, AuctionEndedHandler>();
 builder.Services.AddScoped<AuctionSettlementJob>();
 builder.Services.AddScoped<SessionSweepJob>();

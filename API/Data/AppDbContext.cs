@@ -90,7 +90,7 @@ public class AppDbContext(DbContextOptions options) : IdentityDbContext<AppUser>
         modelBuilder.Entity<OutboxMessage>(b =>
         {
             // Partial index to keep dispatcher claim query cheap. Filtered on pending state and ordered by visibleat, createdat
-            // to match claim's WHERE/ORDER BY exactly
+            // to match claims WHERE/ORDER BY exactly
             b.Property(m => m.Payload).HasColumnType("jsonb");
             b.HasIndex(m => new { m.VisibleAt, m.CreatedAt }).HasFilter("\"Status\" = 0");
         });

@@ -223,14 +223,26 @@ public class PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration
                                       ?? throw new InvalidOperationException(
                                           $"Auction {attempt.Payment.AuctionId} missing for completed payment");
 
+                        // One payload, two rows: the seller's notification and the buyer's receipt
+                        // retry independently, so a mail outage cannot dead-letter the notification.
+                        var payload = JsonSerializer.Serialize(new PaymentCompletedPayload(
+                            attempt.PaymentId, attempt.Payment.AuctionId,
+                            attempt.Payment.UserId, auction.SellerId, auction.ItemName));
+
                         unitOfWork.Outbox.Add(new OutboxMessage
                         {
                             Type = "PaymentCompleted",
                             CreatedAt = now,
                             VisibleAt = now,
-                            Payload = JsonSerializer.Serialize(new PaymentCompletedPayload(
-                                attempt.PaymentId, attempt.Payment.AuctionId,
-                                attempt.Payment.UserId, auction.SellerId, auction.ItemName))
+                            Payload = payload
+                        });
+
+                        unitOfWork.Outbox.Add(new OutboxMessage
+                        {
+                            Type = "PaymentReceipt",
+                            CreatedAt = now,
+                            VisibleAt = now,
+                            Payload = payload
                         });
                     }
                     attempt.Payment.MarkPaid(now);
