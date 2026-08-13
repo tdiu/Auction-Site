@@ -47,6 +47,20 @@ export class AccountService {
     )
   }
 
+  // A real navigation, not HttpClient: the browser has to follow the redirect to the provider and
+  // back. Nothing else in this service changes, because the callback sets the refresh cookie and
+  // the existing refreshToken() on boot picks the session up.
+  //
+  // provider is the Identity scheme name ('Google'), passed through as a path segment so the API
+  // can hand it straight to Challenge(). Resolved against document.baseURI because prod's apiUrl
+  // is the relative 'api' -- assigning that to location.href would resolve against the current
+  // page instead, sending a user on /auctions/5 to /auctions/api/...
+  startExternalLogin(provider: string, returnUrl?: string) {
+    const url = new URL(`${this.baseUrl}/account/external-login/${provider}`, document.baseURI);
+    if (returnUrl && returnUrl !== '/') url.searchParams.set('returnUrl', returnUrl);
+    window.location.href = url.toString();
+  }
+
   refreshToken() {
     return this.serialised(() =>
       this.http.post<User | null>(`${this.baseUrl}/account/refresh-token`, {}, {

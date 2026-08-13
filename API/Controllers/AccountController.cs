@@ -1,12 +1,20 @@
+using System.Security.Claims;
 using API.Core;
 using API.DTOs;
 using API.Interfaces;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
 
-public class AccountController(IAuthService authService) : BaseApiController
+public class AccountController(IAuthService authService,
+    IAuthenticationSchemeProvider schemeProvider,
+    IConfiguration config) : BaseApiController
 {
+    private static readonly Dictionary<string, string> ExternalProviders =
+        new(StringComparer.OrdinalIgnoreCase) { ["google"] = "Google" };
+
     [HttpPost("register")] // api/account/register
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
@@ -72,6 +80,68 @@ public class AccountController(IAuthService authService) : BaseApiController
         return Ok(result.Value.User);
     }
 
+    [HttpGet("external-login/{provider}")]
+    public async Task<IActionResult> ExternalLogin(string provider, string? returnUrl)
+    {
+        if (!ExternalProviders.TryGetValue(provider, out var scheme) ||
+            await schemeProvider.GetSchemeAsync(scheme) is null)
+            return NotFound();
+
+        var properties = new AuthenticationProperties
+        {
+            RedirectUri = Url.Action(nameof(ExternalLoginCallback), new { provider })!
+        };
+        properties.Items["returnUrl"] = SafeReturnUrl(returnUrl);
+        return Challenge(properties, scheme);
+    }
+
+    [HttpGet("external-login/{provider}/callback")]
+    public async Task<IActionResult> ExternalLoginCallback(string provider)
+    {
+        if (!ExternalProviders.TryGetValue(provider, out var scheme))
+            return NotFound();
+
+        var external = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
+        if (!external.Succeeded)
+            return RedirectToClient("/login", "external_failed", scheme);
+
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        var providerKey = external.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(providerKey))
+            return RedirectToClient("/login", "external_failed", scheme);
+
+        var email = external.Principal.FindFirstValue(ClaimTypes.Email);
+
+        var emailVerified = external.Principal.FindFirstValue("email_verified");
+        if (!string.IsNullOrWhiteSpace(email) &&
+            !string.Equals(emailVerified, "true", StringComparison.OrdinalIgnoreCase))
+            return RedirectToClient("/login", "email_unverified", scheme);
+
+        var result = await authService.ExternalLoginAsync(
+            new ExternalLoginRequest(
+                scheme,
+                providerKey,
+                email,
+                external.Principal.FindFirstValue(ClaimTypes.Name)),
+                Request.Headers.UserAgent);
+
+        if (!result.IsSuccess)
+            return RedirectToClient("/login", result.Reason switch
+            {
+                FailureReason.Conflict => "email_has_password",
+                FailureReason.Validation => "no_email",
+                _ => "external_failed"
+            }, scheme);
+
+        var auth = result.Value!;
+        if (auth.RefreshToken is null || auth.RefreshTokenExpiry is null)
+            return RedirectToClient("/login", "external_failed", scheme);
+
+        SetRefreshTokenCookie(auth.RefreshToken, auth.RefreshTokenExpiry.Value);
+        return RedirectToClient(SafeReturnUrl(external.Properties?.GetString("returnUrl")));
+    }
+
 
     private void SetRefreshTokenCookie(string? refreshToken, DateTimeOffset? expires)
     {
@@ -89,5 +159,24 @@ public class AccountController(IAuthService authService) : BaseApiController
     }
 
     private void DeleteRefreshTokenCookie() => Response.Cookies.Delete("refreshToken");
+
+    private static string SafeReturnUrl(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw) || raw[0] != '/')
+            return "/";
+        if (raw.StartsWith("//") || raw.StartsWith("/\\"))
+            return "/";
+        return raw;
+    }
+
+    private IActionResult RedirectToClient(string path, string? reason = null, string? provider = null)
+    {
+        var clientUrl = (config["ClientAppUrl"] ?? "").TrimEnd('/');
+        var query = reason is null
+            ? ""
+            : $"?error={Uri.EscapeDataString(reason)}" +
+              (provider is null ? "" : $"&provider={Uri.EscapeDataString(provider)}");
+        return Redirect($"{clientUrl}{path}{query}");
+    }
 
 }

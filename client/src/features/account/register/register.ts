@@ -103,6 +103,11 @@ export class Register {
     this.router.navigate(['/']);
   }
 
+  // No returnUrl here: register is not a deep-link destination the way login is.
+  continueWith(provider: string) {
+    this.accountService.startExternalLogin(provider);
+  }
+
   private mapRegistrationErrors(error: unknown): RegisterFieldErrors {
     const payload = error instanceof HttpErrorResponse ? error.error : error;
     const problem = this.getProblemDetails(payload);

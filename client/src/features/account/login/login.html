@@ -54,6 +54,21 @@
       {{ isLoggingIn ? 'Logging in…' : 'Log in' }}
     </button>
 
+    <!-- type="button" so it never submits the credentials form. The form's gap-6 handles spacing. -->
+    <div class="flex items-center gap-3">
+      <div class="h-px flex-1 bg-gray-700"></div>
+      <span class="text-xs uppercase tracking-wider text-gray-500">or</span>
+      <div class="h-px flex-1 bg-gray-700"></div>
+    </div>
+
+    <button
+      type="button"
+      (click)="continueWith('Google')"
+      class="btn bg-white hover:bg-gray-100 border border-gray-300 text-gray-800 normal-case font-semibold h-11 rounded-xl w-full"
+    >
+      Continue with Google
+    </button>
+
     <p class="text-center text-sm text-gray-400">
       New here?
       <a routerLink="/register" class="text-[#ff4742] hover:underline font-medium">Create an account</a>

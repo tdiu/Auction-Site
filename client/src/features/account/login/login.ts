@@ -36,9 +36,42 @@ export class Login {
     return raw;
   }
 
+  // The callback can only hand back a reason code, so the copy lives here. Each message names the
+  // other way in: under the no-linking rule a refused user has no self-service recovery, and the
+  // wording is the whole mitigation. The provider is interpolated rather than baked into the
+  // strings, so adding one does not silently make these sentences lie.
+  private static readonly externalErrors: Record<string, (provider: string) => string> = {
+    email_has_password: () =>
+      'That email already has a password account. Log in with your password instead.',
+    no_email: provider =>
+      `We could not sign you in because ${provider} did not share an email address.`,
+    email_unverified: provider =>
+      `${provider} has not verified that email address. Verify it there, then try again.`,
+    external_failed: provider =>
+      `Sign-in with ${provider} did not finish. Please try again.`,
+  };
+
   constructor() {
+    this.showExternalError();
+
     // Go to destination if already logged in
     if (this.accountService.currentUser()) this.router.navigateByUrl(this.returnUrl);
+  }
+
+  // ?error=<code>&provider=<name>, set by the API callback when it redirects back here.
+  private showExternalError() {
+    const params = this.route.snapshot.queryParamMap;
+    const code = params.get('error');
+    if (!code) return;
+
+    const provider = params.get('provider') ?? 'your provider';
+    this.toast.error(Login.externalErrors[code]?.(provider) ?? 'Sign-in failed. Please try again.');
+  }
+
+  // returnUrl is already sanitised by resolveReturnUrl, so the deep-link cases (auth guard,
+  // payment) survive the round trip. The server re-validates it regardless.
+  continueWith(provider: string) {
+    this.accountService.startExternalLogin(provider, this.returnUrl);
   }
 
   login(loginForm: NgForm) {

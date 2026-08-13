@@ -118,8 +118,8 @@ authBuilder.AddCookie(IdentityConstants.ExternalScheme, options =>
     options.SlidingExpiration = false;
 });
 
-var googleClientId = builder.Configuration["GoogleClientId"];
-var googleClientSecret = builder.Configuration["GoogleClientSecret"];
+var googleClientId = builder.Configuration["Google:ClientId"];
+var googleClientSecret = builder.Configuration["Google:ClientSecret"];
 
 if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
 {
@@ -128,7 +128,7 @@ if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientS
         options.ClientId = googleClientId;
         options.ClientSecret = googleClientSecret;
         options.SignInScheme = IdentityConstants.ExternalScheme;
-        options.CallbackPath = "/api/sign-google";
+        options.CallbackPath = "/api/signin-google";
         options.SaveTokens = false;
         options.ClaimActions.MapJsonKey("email_verified", "email_verified", "boolean");
     });
