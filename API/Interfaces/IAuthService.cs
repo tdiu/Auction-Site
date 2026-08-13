@@ -9,4 +9,5 @@ public interface IAuthService
     Task<Result<AuthResult>> LoginAsync(LoginDto loginDto, string? userAgent = null);
     Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken, string? userAgent = null, CancellationToken ct = default);
     Task<Result<bool>> LogoutAsync(string? refreshToken, CancellationToken ct = default);
+    Task<Result<AuthResult>> ExternalLoginAsync(ExternalLoginRequest externalLoginRequest, string? userAgent = null, CancellationToken ct = default);
 }

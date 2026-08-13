@@ -8,18 +8,22 @@ public static class DisplayNameGenerator
     private const int MaxBaseLength = 11;
 
     // Based on minimum length rule in registerDto
-    private const int minLength = 3;
+    private const int MinLength = 3;
 
     public static string Derive(string? providerName, string email)
     {
         var slug = Slugify(providerName);
-        if (slug.Length < minLength)
+        if (slug.Length < MinLength)
             slug = Slugify(email.Split('@')[0]);
-        if (slug.Length < minLength)
+        if (slug.Length < MinLength)
             slug = "user";
 
         return slug.Length > MaxBaseLength ? slug[..MaxBaseLength] : slug;
     }
+
+    // Must exceed the last numbered arm below, so at least one attempt reaches the GUID branch.
+    // Lower it and a signup can fail for want of a username
+    public const int MaxAttempts = 6;
 
     public static string Candidate(string baseName, int attempt)
     {

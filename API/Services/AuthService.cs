@@ -5,13 +5,19 @@ using API.Extensions;
 using API.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace API.Services;
 
-public class AuthService(UserManager<AppUser> userManager, ITokenService tokenService, IUnitOfWork unitOfWork, ILogger<AuthService> logger) : IAuthService
+public class AuthService(
+    UserManager<AppUser> userManager,
+    ITokenService tokenService,
+    IUnitOfWork unitOfWork,
+    ILogger<AuthService> logger) : IAuthService
 {
     private const int RefreshTokenLifetimeDays = 7;
     private static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(15);
+
     public async Task<Result<AuthResult>> RegisterAsync(RegisterDto registerDto, string? userAgent = null)
     {
         var displayName = registerDto.DisplayName.Trim();
@@ -28,10 +34,7 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
 
         var user = new AppUser
         {
-            DisplayName = displayName,
-            UserName = displayName,
-            Email = email,
-            DateOfBirth = registerDto.DateOfBirth
+            DisplayName = displayName, UserName = displayName, Email = email, DateOfBirth = registerDto.DateOfBirth
         };
 
         var res = await userManager.CreateAsync(user, registerDto.Password);
@@ -55,12 +58,51 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         return await IssueAuthTokenAsync(user, userAgent);
     }
 
+    public async Task<Result<AuthResult>> ExternalLoginAsync(
+        ExternalLoginRequest request, string? userAgent = null, CancellationToken ct = default)
+    {
+        var existing = await userManager.FindByLoginAsync(request.Provider, request.ProviderKey);
+        if (existing != null)
+        {
+            if (await userManager.IsLockedOutAsync(existing))
+            {
+                logger.LogWarning(
+                    "Locked out user {UserId} attempted {Provider} sign-in", existing.Id, request.Provider);
+
+                return Result<AuthResult>.Failure("This account is locked", FailureReason.Unauthorized);
+            }
+
+            return await IssueAuthTokenAsync(existing, userAgent);
+        }
+
+        var email = request.Email?.Trim();
+        if (string.IsNullOrWhiteSpace(email))
+            return Result<AuthResult>.Failure($"{request.Provider} did not supply an email address",
+                FailureReason.Validation);
+
+        // One email, one account, one auth method. No linking in either direction
+        if (await userManager.FindByEmailAsync(email) != null)
+            return Result<AuthResult>.Failure("Email is already taken", FailureReason.Conflict);
+
+        var created = await CreateExternalUserAsync(email, request, ct);
+        if (!created.IsSuccess)
+            return new Result<AuthResult>
+            {
+                IsSuccess = false,
+                Error = created.Error,
+                ValidationErrors = created.ValidationErrors,
+                Reason = created.Reason
+            };
+        return await IssueAuthTokenAsync(created.Value!, userAgent);
+    }
+
     public async Task<Result<bool>> LogoutAsync(string? refreshToken, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(refreshToken))
             return Result<bool>.Success(true);
 
-        var session = await unitOfWork.RefreshSessions.GetByTokenHashAsync(tokenService.HashRefreshToken(refreshToken), ct);
+        var session =
+            await unitOfWork.RefreshSessions.GetByTokenHashAsync(tokenService.HashRefreshToken(refreshToken), ct);
 
         // Unknown or already revoked: nothing to do
         if (session is null || session.RevokedAt is not null)
@@ -111,9 +153,11 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
     }
 
     // Rotate token
-    public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken, string? userAgent = null, CancellationToken ct = default)
+    public async Task<Result<AuthResult>> RefreshTokenAsync(string refreshToken, string? userAgent = null,
+        CancellationToken ct = default)
     {
-        var session = await unitOfWork.RefreshSessions.GetByTokenHashAsync(tokenService.HashRefreshToken(refreshToken), ct);
+        var session =
+            await unitOfWork.RefreshSessions.GetByTokenHashAsync(tokenService.HashRefreshToken(refreshToken), ct);
 
         if (session == null)
             return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
@@ -223,6 +267,92 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
         return Result<AuthResult>.Failure("Invalid refresh token", FailureReason.Unauthorized);
     }
 
+    private async Task<Result<AppUser>> CreateExternalUserAsync(string email, ExternalLoginRequest request,
+        CancellationToken ct)
+    {
+        var baseName = DisplayNameGenerator.Derive(request.Name, email);
+        var user = new AppUser { Email = email, EmailConfirmed = true, DisplayName = baseName, };
+
+        // Account row and provider link must land together. A user with no password nor login row
+        // is unusable and its email blocks both signup paths forever
+        await using var tx = await unitOfWork.BeginTransactionAsync(ct);
+
+        for (var attempt = 0; attempt < DisplayNameGenerator.MaxAttempts; attempt++)
+        {
+            var candidate = DisplayNameGenerator.Candidate(baseName, attempt);
+            user.DisplayName = candidate;
+            user.UserName = candidate;
+
+            // Failed INSERT aborts the enclosing Postgres transaction. Every attempt runs inside its own
+            // savepoint. Rolling back to it leaves the entity Added in the change tracker
+            await tx.CreateSavepointAsync("attempt", ct);
+
+            IdentityResult result;
+            try
+            {
+                result = await userManager.CreateAsync(user);
+            }
+            catch (DbUpdateException ex) when (IsNameCollision(ex))
+            {
+                await tx.RollbackToSavepointAsync("attempt", ct);
+                continue;
+            }
+            catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+            {
+                // EmailIndex is unique. Concurrent signup for the same email lands here
+                // Should not retry
+                return Result<AppUser>.Failure("Email already registered", FailureReason.Conflict);
+            }
+
+            if (result.Succeeded)
+            {
+                try
+                {
+                    var link = await userManager.AddLoginAsync(user, new UserLoginInfo(
+                        request.Provider, request.ProviderKey, request.Provider));
+
+                    if (!link.Succeeded)
+                    {
+                        logger.LogError(
+                            "Could not link {Provider} login for {Email}: {Errors}",
+                            request.Provider, email, string.Join("; ", link.Errors.Select(e => e.Code)));
+
+                        return Result<AppUser>.Failure("Could not complete sign-in", FailureReason.InternalError);
+                    }
+                }
+                catch (DbUpdateException ex)
+                {
+                    // Transaction rolls back on dispose and takes account row with it
+                    // No orphan to recover from; user just retries
+                    logger.LogError(ex,
+                        "Could not link {Provider} login for {Email}", request.Provider, email);
+
+                    return Result<AppUser>.Failure("Could not complete sign-in", FailureReason.InternalError);
+                }
+
+                await tx.CommitAsync(ct);
+                return Result<AppUser>.Success(user);
+            }
+
+            // Validator caught the duplicate before INSERT
+            if (result.Errors.Any(e => e.Code == "DuplicateUserName"))
+            {
+                await tx.RollbackToSavepointAsync("attempt", ct);
+                continue;
+            }
+
+            return Result<AppUser>.ValidationFailure(MapIdentityErrors(result.Errors));
+        }
+
+        // Unreachable in practice: the last attempt takes Candidate's GUID branch, which cannot
+        // collide. Reaching here means that branch stopped being reachable, not that we were unlucky
+        logger.LogError(
+            "Exhausted {Attempts} display name attempts from base {BaseName} for {Email}",
+            DisplayNameGenerator.MaxAttempts, baseName, email);
+
+        return Result<AppUser>.Failure("Could not allocate a username", FailureReason.InternalError);
+    }
+
     private static Dictionary<string, string[]> MapIdentityErrors(IEnumerable<IdentityError> identityErrors)
     {
         return identityErrors
@@ -247,4 +377,12 @@ public class AuthService(UserManager<AppUser> userManager, ITokenService tokenSe
 
     private static string? Truncate(string? value, int maxLength)
         => value is null || value.Length <= maxLength ? value : value.Substring(0, maxLength);
+
+    private static bool IsNameCollision(DbUpdateException ex)
+        => ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "IX_AspNetUsers_DisplayName" or "UserNameIndex"
+        };
+
 }
