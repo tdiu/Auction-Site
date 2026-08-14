@@ -29,15 +29,32 @@ public class AuthService(
         if (await userManager.Users.AnyAsync(x => x.DisplayName == displayName))
             return Result<AuthResult>.ValidationFailure("displayName", "Username already exists");
 
-        if (await userManager.Users.AnyAsync(x => x.Email == email))
+        var normalizedEmail = userManager.NormalizeEmail(email);
+        if (await userManager.Users.AnyAsync(x => x.NormalizedEmail == normalizedEmail))
             return Result<AuthResult>.ValidationFailure("email", "Email is already taken");
 
         var user = new AppUser
         {
-            DisplayName = displayName, UserName = displayName, Email = email, DateOfBirth = registerDto.DateOfBirth
+            DisplayName = displayName,
+            UserName = displayName,
+            Email = email,
+            DateOfBirth = registerDto.DateOfBirth
         };
 
-        var res = await userManager.CreateAsync(user, registerDto.Password);
+        IdentityResult res;
+        try
+        {
+            res = await userManager.CreateAsync(user, registerDto.Password);
+        }
+        catch (DbUpdateException ex) when (IsNameCollision(ex))
+        {
+            return Result<AuthResult>.Failure("Username already exists", FailureReason.Conflict);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            return Result<AuthResult>.Failure("Email is already taken", FailureReason.Conflict);
+        }
+
         if (!res.Succeeded)
             return Result<AuthResult>.ValidationFailure(MapIdentityErrors(res.Errors));
 

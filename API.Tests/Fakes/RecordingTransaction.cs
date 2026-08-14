@@ -31,6 +31,33 @@ public class RecordingTransaction : IDbContextTransaction
         return Task.CompletedTask;
     }
 
+    public bool SupportsSavepoints => true;
+
+    public List<string> Savepoints { get; } = [];
+
+    public List<string> SavepointRollbacks { get; } = [];
+
+    public void CreateSavepoint(string name) => Savepoints.Add(name);
+
+    public Task CreateSavepointAsync(string name, CancellationToken cancellationToken = default)
+    {
+        Savepoints.Add(name);
+        return Task.CompletedTask;
+    }
+
+    public void RollbackToSavepoint(string name) => SavepointRollbacks.Add(name);
+
+    public Task RollbackToSavepointAsync(string name, CancellationToken cancellationToken = default)
+    {
+        SavepointRollbacks.Add(name);
+        return Task.CompletedTask;
+    }
+
+    public void ReleaseSavepoint(string name) { }
+
+    public Task ReleaseSavepointAsync(string name, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     public void Dispose() => Disposed = true;
 
     public ValueTask DisposeAsync()

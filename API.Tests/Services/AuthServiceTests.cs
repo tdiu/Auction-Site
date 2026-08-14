@@ -636,4 +636,170 @@ public class AuthServiceTests
 
         Assert.True(result.IsSuccess);
     }
+
+    // ---- external login ----
+
+    [Fact]
+    public async Task ExternalLoginAsync_NewUser_CreatesAccountWithGeneratedNameAndNoDob()
+    {
+        var h = await CreateContext();
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-1", "alex.smith@example.com", "Alex Smith"));
+
+        Assert.True(result.IsSuccess, result.Error);
+
+        var user = await h.UserManager.FindByLoginAsync("Google", "sub-1");
+        Assert.NotNull(user);
+        Assert.Equal("alexsmith", user!.DisplayName);
+        Assert.Equal(user.DisplayName, user.UserName);
+        Assert.Null(user.DateOfBirth);
+        Assert.Null(user.PasswordHash);
+        Assert.True(user.EmailConfirmed);
+        Assert.Equal("Google", result.Value!.User.AuthProvider);
+
+        var session = Assert.Single(h.Sessions.Rows);
+        Assert.Equal(user.Id, session.UserId);
+        Assert.Null(session.RevokedAt);
+    }
+
+    [Fact]
+    public async Task ExternalLoginAsync_NameAlreadyTaken_SuffixesAndKeepsBothUsers()
+    {
+        var h = await CreateContext();
+        await h.UserManager.CreateAsync(new AppUser
+        {
+            DisplayName = "alexsmith",
+            UserName = "alexsmith",
+            Email = "other@test.com"
+        });
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-2", "alex.smith@example.com", "Alex Smith"));
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.StartsWith("alexsmith", result.Value!.User.DisplayName);
+        Assert.NotEqual("alexsmith", result.Value.User.DisplayName);
+        Assert.Equal(2, await h.UserManager.Users.CountAsync());
+
+        var tx = Assert.Single(h.Transactions);
+        Assert.Contains("attempt", tx.SavepointRollbacks);
+        Assert.True(tx.Committed);
+    }
+
+    [Fact]
+    public async Task ExternalLoginAsync_ReturningUser_MatchesOnSubAndDoesNotDuplicate()
+    {
+        var h = await CreateContext();
+        await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-3", "alex@example.com", "Alex Smith"));
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-3", "moved@example.com", "Alex Smith"));
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(1, await h.UserManager.Users.CountAsync());
+        Assert.Equal("alex@example.com", result.Value!.User.Email);
+        Assert.Equal(2, h.Sessions.Rows.Count);
+    }
+
+    [Fact]
+    public async Task ExternalLoginAsync_EmailBelongsToPasswordAccount_RefusesAndCreatesNothing()
+    {
+        var h = await CreateContext();
+        await h.Sut.RegisterAsync(new RegisterDto
+        {
+            DisplayName = "alex",
+            Email = "alex@example.com",
+            Password = "Pass123"
+        });
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-4", "alex@example.com", "Alex Smith"));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Conflict, result.Reason);
+        Assert.Equal(1, await h.UserManager.Users.CountAsync());
+        Assert.Null(await h.UserManager.FindByLoginAsync("Google", "sub-4"));
+    }
+
+    [Fact]
+    public async Task ExternalLoginAsync_NoEmailClaim_RefusesWithoutCreatingAnAccount()
+    {
+        var h = await CreateContext();
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-5", null, "Alex Smith"));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Validation, result.Reason);
+        Assert.Equal(0, await h.UserManager.Users.CountAsync());
+        Assert.Empty(h.Sessions.Rows);
+    }
+
+    [Fact]
+    public async Task ExternalLoginAsync_EmptyNameClaim_FallsBackToEmailLocalPart()
+    {
+        var h = await CreateContext();
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-6", "alex.smith@example.com", ""));
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("alexsmith", result.Value!.User.DisplayName);
+    }
+
+    [Fact]
+    public async Task ExternalLoginAsync_WhenTheUserIsLockedOut_RefusesWithoutIssuingASession()
+    {
+        var h = await CreateContext();
+        await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"));
+
+        var user = await h.UserManager.FindByLoginAsync("Google", "sub-7");
+        await h.UserManager.SetLockoutEnabledAsync(user!, true);
+        await h.UserManager.SetLockoutEndDateAsync(user!, DateTimeOffset.UtcNow.AddMinutes(5));
+        var sessionsBefore = h.Sessions.Rows.Count;
+
+        var result = await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Unauthorized, result.Reason);
+        Assert.Equal(sessionsBefore, h.Sessions.Rows.Count);
+    }
+
+    [Fact]
+    public async Task LoginAsync_AgainstPasswordlessExternalAccount_IsRejected()
+    {
+        var h = await CreateContext();
+        await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-8", "alex@example.com", "Alex Smith"));
+        var sessionsBefore = h.Sessions.Rows.Count;
+
+        var result = await h.Sut.LoginAsync(new LoginDto { Email = "alex@example.com", Password = "Pass123" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Unauthorized, result.Reason);
+        Assert.Equal(sessionsBefore, h.Sessions.Rows.Count);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithEmailHeldByExternalAccount_IsRejected()
+    {
+        var h = await CreateContext();
+        await h.Sut.ExternalLoginAsync(
+            new ExternalLoginRequest("Google", "sub-9", "alex@example.com", "Alex Smith"));
+
+        var result = await h.Sut.RegisterAsync(new RegisterDto
+        {
+            DisplayName = "alex2",
+            Email = "alex@example.com",
+            Password = "Pass123"
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Email is already taken", result.ValidationErrors!["email"]);
+        Assert.Equal(1, await h.UserManager.Users.CountAsync());
+    }
 }

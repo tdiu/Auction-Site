@@ -1,5 +1,4 @@
 using System.Net;
-using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using API.Data;
@@ -170,26 +169,15 @@ builder.Services.AddRateLimiter(options =>
 
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
     {
-        var path = httpContext.Request.Path;
+        if (RateLimitPartitions.IsExempt(httpContext.Request.Path))
+            return RateLimitPartition.GetNoLimiter(RateLimitPartitions.Exempt);
 
-        if (path.StartsWithSegments("/api/payments/webhook") || path.StartsWithSegments("/hubs"))
-            return RateLimitPartition.GetNoLimiter("exempt");
+        var bucket = RateLimitPartitions.For(httpContext);
 
-        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId != null)
-            return RateLimitPartition.GetFixedWindowLimiter($"u:{userId}",
-                _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = 100,
-                    Window = TimeSpan.FromMinutes(1),
-                    QueueLimit = 0
-                });
-
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return RateLimitPartition.GetFixedWindowLimiter($"ip:{ip}",
+        return RateLimitPartition.GetFixedWindowLimiter(bucket.Key,
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 30,
+                PermitLimit = bucket.PermitLimit,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });

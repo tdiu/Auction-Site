@@ -2,6 +2,7 @@ using System.Security.Claims;
 using API.Core;
 using API.DTOs;
 using API.Interfaces;
+using API.Validation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -94,7 +95,7 @@ public class AccountController(IAuthService authService,
         {
             RedirectUri = Url.Action(nameof(ExternalLoginCallback), new { provider })!
         };
-        properties.Items["returnUrl"] = SafeReturnUrl(returnUrl);
+        properties.Items["returnUrl"] = ReturnUrlPolicy.Safe(returnUrl);
         return Challenge(properties, scheme);
     }
 
@@ -142,7 +143,7 @@ public class AccountController(IAuthService authService,
             return RedirectToClient("/login", "external_failed", scheme);
 
         SetRefreshTokenCookie(auth.RefreshToken, auth.RefreshTokenExpiry.Value);
-        return RedirectToClient(SafeReturnUrl(external.Properties?.GetString("returnUrl")));
+        return RedirectToClient(ReturnUrlPolicy.Safe(external.Properties?.GetString("returnUrl")));
     }
 
 
@@ -163,14 +164,6 @@ public class AccountController(IAuthService authService,
 
     private void DeleteRefreshTokenCookie() => Response.Cookies.Delete("refreshToken");
 
-    private static string SafeReturnUrl(string? raw)
-    {
-        if (string.IsNullOrEmpty(raw) || raw[0] != '/')
-            return "/";
-        if (raw.StartsWith("//") || raw.StartsWith("/\\"))
-            return "/";
-        return raw;
-    }
 
     private IActionResult RedirectToClient(string path, string? reason = null, string? provider = null)
     {

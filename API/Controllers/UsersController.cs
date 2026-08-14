@@ -13,6 +13,9 @@ namespace API.Controllers;
 
 public class UsersController(UserManager<AppUser> userManager) : BaseApiController
 {
+    private const int MaxResults = 10;
+
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<MemberDto>>> GetUsers([FromQuery] string? search)
     {
@@ -22,16 +25,15 @@ public class UsersController(UserManager<AppUser> userManager) : BaseApiControll
         {
             var term = search.Trim().ToLower();
             query = query.Where(u => u.DisplayName.ToLower().Contains(term));
-
-            // Don't offer the current user as a recipient to message.
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!string.IsNullOrEmpty(currentUserId))
-                query = query.Where(u => u.Id != currentUserId);
-
-            query = query.OrderBy(u => u.DisplayName).Take(10);
         }
 
-        var users = await query.ToListAsync();
+        // Don't offer the current user as a recipient to message.
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(currentUserId))
+            query = query.Where(u => u.Id != currentUserId);
+
+        var users = await query.OrderBy(u => u.DisplayName).Take(MaxResults).ToListAsync();
+
         var members = users.Select(u => u.ToMemberDto()).ToList();
         return Ok(members);
     }
