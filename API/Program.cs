@@ -1,4 +1,7 @@
+using System.Net;
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using API.Data;
 using API.Entities;
 using API.Extensions;
@@ -14,6 +17,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -155,6 +159,95 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
         };
         return new BadRequestObjectResult(problemDetails);
     });
+
+var authWindow = TimeSpan.FromMinutes(15);
+const int authSegmentsPerWindow = 3;
+var authRetryAfter = authWindow / authSegmentsPerWindow;
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var path = httpContext.Request.Path;
+
+        if (path.StartsWithSegments("/api/payments/webhook") || path.StartsWithSegments("/hubs"))
+            return RateLimitPartition.GetNoLimiter("exempt");
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId != null)
+            return RateLimitPartition.GetFixedWindowLimiter($"u:{userId}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 100,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                });
+
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter($"ip:{ip}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+
+    // Credential-guessing budget
+    options.AddPolicy("auth", httpContext =>
+    {
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        // Keyed per path so a burst of registrations cannot spend the login budget.
+        return RateLimitPartition.GetSlidingWindowLimiter(
+            $"auth:{httpContext.Request.Path}:{ip}",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = authWindow,
+                SegmentsPerWindow = authSegmentsPerWindow,
+                QueueLimit = 0
+            });
+    });
+
+    options.OnRejected = (context, _) =>
+    {
+        // Only the fixed-window limiters populate this. SlidingWindowRateLimiter leaves it unset,
+        // which would otherwise send a bare 429 with no back-off hint from the auth endpoints.
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var metadata)
+            ? metadata
+            : authRetryAfter;
+
+        context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        return ValueTask.CompletedTask;
+    };
+});
+
+// Every per-IP limit above reads Connection.RemoteIpAddress, which behind a proxy is the proxy itself.
+// Without this, all anonymous traffic collapses into one partition.
+var knownProxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+var knownNetworks = builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+var trustForwardedHeaders = knownProxies.Length > 0 || knownNetworks.Length > 0;
+
+if (trustForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        // Only the nearest hop is ours to trust; anything further left in the chain is client-supplied.
+        options.ForwardLimit = 1;
+        // Defaults trust loopback, which is not where the proxy lives once this is containerised.
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+
+        foreach (var proxy in knownProxies)
+            options.KnownProxies.Add(IPAddress.Parse(proxy));
+        foreach (var network in knownNetworks)
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+    });
+}
+
 builder.Services.AddHttpsRedirection(options =>
 {
     options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
@@ -170,6 +263,12 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+
+// First in the pipeline: everything downstream that reads the scheme or the client IP
+// (HSTS, HTTPS redirect, the rate limiter) needs the rewritten values, not the proxy's.
+if (trustForwardedHeaders)
+    app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
@@ -186,6 +285,7 @@ app.UseCors(x => x
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireDashboardAuthFilter(app.Environment)]
