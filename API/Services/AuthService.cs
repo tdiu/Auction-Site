@@ -68,9 +68,24 @@ public class AuthService(
         if (user == null)
             return Result<AuthResult>.Failure("Invalid Credentials", FailureReason.Unauthorized);
 
+        // Checked before the password so a locked account cannot have its window extended by
+        // further guesses, and so we skip the deliberately expensive hash for traffic we refuse.
+        if (await userManager.IsLockedOutAsync(user))
+        {
+            logger.LogWarning("Locked out user {UserId} attempted a password sign-in", user.Id);
+            return Result<AuthResult>.Failure("This account is locked", FailureReason.Locked);
+        }
+
         var valid = await userManager.CheckPasswordAsync(user, loginDto.Password);
         if (!valid)
+        {
+            // The per-account counter is the only thing that sees credential stuffing spread
+            // across many addresses, which a per-IP rate limit cannot.
+            await userManager.AccessFailedAsync(user);
             return Result<AuthResult>.Failure("Invalid Credentials", FailureReason.Unauthorized);
+        }
+
+        await userManager.ResetAccessFailedCountAsync(user);
 
         return await IssueAuthTokenAsync(user, userAgent);
     }
@@ -86,7 +101,7 @@ public class AuthService(
                 logger.LogWarning(
                     "Locked out user {UserId} attempted {Provider} sign-in", existing.Id, request.Provider);
 
-                return Result<AuthResult>.Failure("This account is locked", FailureReason.Unauthorized);
+                return Result<AuthResult>.Failure("This account is locked", FailureReason.Locked);
             }
 
             return await IssueAuthTokenAsync(existing, userAgent);

@@ -97,6 +97,41 @@ describe('Login', () => {
     expect(navSpy).toHaveBeenCalledWith('/');
   });
 
+  it('reports a locked account as too many attempts rather than the server prose', () => {
+    accountService.login.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 423,
+      error: {title: 'Locked', detail: 'This account is locked'}
+    })));
+
+    createComponent().login({invalid: false} as NgForm);
+
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Too many login attempts. Please try again later.');
+  });
+
+  // The rate limiter sets a status code and no body at all, so the ProblemDetails path has
+  // nothing to read and would otherwise show the generic fallback.
+  it('reports a throttled login as too many attempts despite the empty body', () => {
+    accountService.login.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 429,
+      error: null
+    })));
+
+    createComponent().login({invalid: false} as NgForm);
+
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Too many login attempts. Please try again later.');
+  });
+
+  it('uses the same wording when the external callback reports a locked account', () => {
+    queryParams['error'] = 'account_locked';
+
+    createComponent();
+
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Too many login attempts. Please try again later.');
+  });
+
   it('says nothing when the callback reported no error', () => {
     createComponent();
 

@@ -80,6 +80,9 @@ builder.Services.AddIdentityCore<AppUser>(options =>
     {
         options.Password.RequireNonAlphanumeric = false;
         options.User.RequireUniqueEmail = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        options.Lockout.AllowedForNewUsers = true;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
@@ -163,6 +166,26 @@ var authWindow = TimeSpan.FromMinutes(15);
 const int authSegmentsPerWindow = 3;
 var authRetryAfter = authWindow / authSegmentsPerWindow;
 
+// Volume protection only; the per-account lockout stops guessing. Keyed on IP, so a tight number
+// costs a NAT'd office more than an attacker.
+const int loginPermitLimit = 30;
+const int registerPermitLimit = 10;
+
+RateLimitPartition<string> AuthPartition(string policy, int permitLimit, HttpContext httpContext)
+{
+    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    return RateLimitPartition.GetSlidingWindowLimiter(
+        $"{policy}:{ip}",
+        _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = authWindow,
+            SegmentsPerWindow = authSegmentsPerWindow,
+            QueueLimit = 0
+        });
+}
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -183,21 +206,8 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
-    // Credential-guessing budget
-    options.AddPolicy("auth", httpContext =>
-    {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        // Keyed per path so a burst of registrations cannot spend the login budget.
-        return RateLimitPartition.GetSlidingWindowLimiter(
-            $"auth:{httpContext.Request.Path}:{ip}",
-            _ => new SlidingWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = authWindow,
-                SegmentsPerWindow = authSegmentsPerWindow,
-                QueueLimit = 0
-            });
-    });
+    options.AddPolicy("login", ctx => AuthPartition("login", loginPermitLimit, ctx));
+    options.AddPolicy("register", ctx => AuthPartition("register", registerPermitLimit, ctx));
 
     options.OnRejected = (context, _) =>
     {

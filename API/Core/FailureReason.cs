@@ -7,5 +7,6 @@ public enum FailureReason
     Unauthorized,
     Conflict,
     InternalError,
-    Forbidden
+    Forbidden,
+    Locked
 }

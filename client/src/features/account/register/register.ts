@@ -109,6 +109,11 @@ export class Register {
   }
 
   private mapRegistrationErrors(error: unknown): RegisterFieldErrors {
+    // The request quota returns no body, so the generic path below would report the misleading
+    // 'Registration failed' for something that is only a matter of waiting.
+    if (error instanceof HttpErrorResponse && error.status === 429)
+      return {form: ['Too many attempts. Please try again later.']};
+
     const payload = error instanceof HttpErrorResponse ? error.error : error;
     const problem = this.getProblemDetails(payload);
     const fieldErrors: RegisterFieldErrors = {};

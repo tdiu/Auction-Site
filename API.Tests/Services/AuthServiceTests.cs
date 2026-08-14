@@ -637,6 +637,86 @@ public class AuthServiceTests
         Assert.True(result.IsSuccess);
     }
 
+    // ---- lockout ----
+
+    [Fact]
+    public async Task LoginAsync_WithWrongPassword_IncrementsTheFailureCount()
+    {
+        var h = await CreateContext();
+        var user = await CreateUserAsync(h.UserManager, "counted");
+
+        await h.Sut.LoginAsync(new LoginDto { Email = user.Email!, Password = "Wrong1" });
+
+        Assert.Equal(1, await h.UserManager.GetAccessFailedCountAsync(user));
+        Assert.False(await h.UserManager.IsLockedOutAsync(user));
+    }
+
+    [Fact]
+    public async Task LoginAsync_AfterFiveFailures_LocksTheAccount()
+    {
+        var h = await CreateContext();
+        var user = await CreateUserAsync(h.UserManager, "lockme");
+
+        for (var attempt = 0; attempt < 5; attempt++)
+            await h.Sut.LoginAsync(new LoginDto { Email = user.Email!, Password = "Wrong1" });
+
+        Assert.True(await h.UserManager.IsLockedOutAsync(user));
+        Assert.Empty(h.Sessions.Rows);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenLockedOut_RefusesEvenWithTheCorrectPassword()
+    {
+        var h = await CreateContext();
+        var user = await CreateUserAsync(h.UserManager, "locked");
+        await h.UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMinutes(15));
+
+        var result = await h.Sut.LoginAsync(new LoginDto { Email = user.Email!, Password = "Pass123" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(FailureReason.Locked, result.Reason);
+        Assert.Empty(h.Sessions.Rows);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenLockedOut_DoesNotExtendTheWindow()
+    {
+        var h = await CreateContext();
+        var user = await CreateUserAsync(h.UserManager, "noextend");
+        await h.UserManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMinutes(15));
+        var lockedUntil = await h.UserManager.GetLockoutEndDateAsync(user);
+
+        await h.Sut.LoginAsync(new LoginDto { Email = user.Email!, Password = "Wrong1" });
+
+        Assert.Equal(lockedUntil, await h.UserManager.GetLockoutEndDateAsync(user));
+        Assert.Equal(0, await h.UserManager.GetAccessFailedCountAsync(user));
+    }
+
+    [Fact]
+    public async Task LoginAsync_OnSuccess_ClearsTheFailureCount()
+    {
+        var h = await CreateContext();
+        var user = await CreateUserAsync(h.UserManager, "cleared");
+        await h.Sut.LoginAsync(new LoginDto { Email = user.Email!, Password = "Wrong1" });
+        Assert.Equal(1, await h.UserManager.GetAccessFailedCountAsync(user));
+
+        var result = await h.Sut.LoginAsync(new LoginDto { Email = user.Email!, Password = "Pass123" });
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(0, await h.UserManager.GetAccessFailedCountAsync(user));
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithUnknownEmail_CannotLockAnAccountThatDoesNotExist()
+    {
+        var h = await CreateContext();
+
+        for (var attempt = 0; attempt < 6; attempt++)
+            await h.Sut.LoginAsync(new LoginDto { Email = "nobody@test.com", Password = "Wrong1" });
+
+        Assert.Equal(0, await h.UserManager.Users.CountAsync());
+    }
+
     // ---- external login ----
 
     [Fact]
@@ -765,7 +845,7 @@ public class AuthServiceTests
             new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(FailureReason.Unauthorized, result.Reason);
+        Assert.Equal(FailureReason.Locked, result.Reason);
         Assert.Equal(sessionsBefore, h.Sessions.Rows.Count);
     }
 

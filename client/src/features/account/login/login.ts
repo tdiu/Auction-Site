@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {Component, inject} from '@angular/core';
 import {FormsModule, NgForm} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
@@ -40,7 +41,13 @@ export class Login {
   // other way in: under the no-linking rule a refused user has no self-service recovery, and the
   // wording is the whole mitigation. The provider is interpolated rather than baked into the
   // strings, so adding one does not silently make these sentences lie.
+  // Deliberately vague about which limit was hit. The account lockout (423) and the request quota
+  // (429) are different mechanisms, but telling a caller which one stopped them tells an attacker
+  // whether the account exists, and neither one is actionable beyond waiting.
+  private static readonly tooManyAttempts = 'Too many login attempts. Please try again later.';
+
   private static readonly externalErrors: Record<string, (provider: string) => string> = {
+    account_locked: () => Login.tooManyAttempts,
     email_has_password: () =>
       'That email already has a password account. Log in with your password instead.',
     no_email: provider =>
@@ -86,7 +93,17 @@ export class Login {
         this.toast.success('Logged in successfully');
         this.router.navigateByUrl(this.returnUrl);
       },
-      error: err => this.toast.error(getApiErrorMessage(err, 'Login failed')),
+      error: err => this.toast.error(Login.loginErrorMessage(err)),
     });
+  }
+
+  // 423 is the account lockout after repeated bad passwords; 429 is the request quota on the
+  // endpoint. Both mean "stop and come back later", and neither carries a body worth surfacing:
+  // the limiter returns none at all, so the generic path would fall through to 'Login failed'.
+  private static loginErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse && (error.status === 423 || error.status === 429))
+      return Login.tooManyAttempts;
+
+    return getApiErrorMessage(error, 'Login failed');
   }
 }
