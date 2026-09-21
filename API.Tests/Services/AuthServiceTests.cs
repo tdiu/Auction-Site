@@ -366,7 +366,7 @@ public class AuthServiceTests
         var user = await CreateUserAsync(h.UserManager, "refreshuser");
         var predecessor = SeedSession(h.Sessions, user.Id, "old-token");
 
-        var result = await h.Sut.RefreshTokenAsync("old-token", "phone-agent");
+        var result = await h.Sut.RefreshTokenAsync("old-token", "phone-agent", TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("test-token", result.Value!.User.Token);
@@ -393,7 +393,7 @@ public class AuthServiceTests
     {
         var h = await CreateContext();
 
-        var result = await h.Sut.RefreshTokenAsync("missing-token");
+        var result = await h.Sut.RefreshTokenAsync("missing-token", ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Invalid refresh token", result.Error);
@@ -410,7 +410,7 @@ public class AuthServiceTests
         var user = await CreateUserAsync(h.UserManager, "expireduser");
         var session = SeedSession(h.Sessions, user.Id, "expired-token", DateTimeOffset.UtcNow.AddMinutes(-1));
 
-        var result = await h.Sut.RefreshTokenAsync("expired-token");
+        var result = await h.Sut.RefreshTokenAsync("expired-token", ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.Unauthorized, result.Reason);
@@ -435,7 +435,7 @@ public class AuthServiceTests
         predecessor.RevokedReason = SessionRevokedReason.Rotated;
         predecessor.ReplacedById = successor.Id;
 
-        var result = await h.Sut.RefreshTokenAsync("old-token");
+        var result = await h.Sut.RefreshTokenAsync("old-token", ct: TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("test-token", result.Value!.User.Token);
@@ -463,7 +463,7 @@ public class AuthServiceTests
         predecessor.RevokedReason = SessionRevokedReason.Rotated;
         predecessor.ReplacedById = successor.Id;
 
-        var result = await h.Sut.RefreshTokenAsync("old-token");
+        var result = await h.Sut.RefreshTokenAsync("old-token", ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Invalid refresh token", result.Error);
@@ -493,7 +493,7 @@ public class AuthServiceTests
         predecessor.RevokedReason = SessionRevokedReason.Rotated;
         predecessor.ReplacedById = successor.Id;
 
-        var result = await h.Sut.RefreshTokenAsync("old-token");
+        var result = await h.Sut.RefreshTokenAsync("old-token", ct: TestContext.Current.CancellationToken);
 
         // Recency is not enough — the grace window must not serve a token off a dead chain.
         Assert.False(result.IsSuccess);
@@ -512,7 +512,7 @@ public class AuthServiceTests
         loggedOut.RevokedAt = DateTimeOffset.UtcNow.AddMinutes(-1);
         loggedOut.RevokedReason = SessionRevokedReason.LoggedOut;
 
-        var result = await h.Sut.RefreshTokenAsync("old-token");
+        var result = await h.Sut.RefreshTokenAsync("old-token", ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.Unauthorized, result.Reason);
@@ -539,7 +539,7 @@ public class AuthServiceTests
             row.ReplacedById = winner.Id;
         };
 
-        var result = await h.Sut.RefreshTokenAsync("old-token");
+        var result = await h.Sut.RefreshTokenAsync("old-token", ct: TestContext.Current.CancellationToken);
 
         // Not an attack — a tab restore. It is served from the grace branch, access token only.
         Assert.True(result.IsSuccess);
@@ -565,7 +565,7 @@ public class AuthServiceTests
         var presented = SeedSession(h.Sessions, user.Id, "old-token");
         var otherDevice = SeedSession(h.Sessions, user.Id, "other-device-token");
 
-        var result = await h.Sut.RefreshTokenAsync("old-token");
+        var result = await h.Sut.RefreshTokenAsync("old-token", ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.Unauthorized, result.Reason);
@@ -714,7 +714,7 @@ public class AuthServiceTests
         for (var attempt = 0; attempt < 6; attempt++)
             await h.Sut.LoginAsync(new LoginDto { Email = "nobody@test.com", Password = "Wrong1" });
 
-        Assert.Equal(0, await h.UserManager.Users.CountAsync());
+        Assert.Equal(0, await h.UserManager.Users.CountAsync(TestContext.Current.CancellationToken));
     }
 
     // ---- external login ----
@@ -725,7 +725,8 @@ public class AuthServiceTests
         var h = await CreateContext();
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-1", "alex.smith@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-1", "alex.smith@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, result.Error);
 
@@ -755,12 +756,13 @@ public class AuthServiceTests
         });
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-2", "alex.smith@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-2", "alex.smith@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.StartsWith("alexsmith", result.Value!.User.DisplayName);
         Assert.NotEqual("alexsmith", result.Value.User.DisplayName);
-        Assert.Equal(2, await h.UserManager.Users.CountAsync());
+        Assert.Equal(2, await h.UserManager.Users.CountAsync(TestContext.Current.CancellationToken));
 
         var tx = Assert.Single(h.Transactions);
         Assert.Contains("attempt", tx.SavepointRollbacks);
@@ -772,13 +774,15 @@ public class AuthServiceTests
     {
         var h = await CreateContext();
         await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-3", "alex@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-3", "alex@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-3", "moved@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-3", "moved@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, result.Error);
-        Assert.Equal(1, await h.UserManager.Users.CountAsync());
+        Assert.Equal(1, await h.UserManager.Users.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal("alex@example.com", result.Value!.User.Email);
         Assert.Equal(2, h.Sessions.Rows.Count);
     }
@@ -795,11 +799,12 @@ public class AuthServiceTests
         });
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-4", "alex@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-4", "alex@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.Conflict, result.Reason);
-        Assert.Equal(1, await h.UserManager.Users.CountAsync());
+        Assert.Equal(1, await h.UserManager.Users.CountAsync(TestContext.Current.CancellationToken));
         Assert.Null(await h.UserManager.FindByLoginAsync("Google", "sub-4"));
     }
 
@@ -809,11 +814,12 @@ public class AuthServiceTests
         var h = await CreateContext();
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-5", null, "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-5", null, "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.Validation, result.Reason);
-        Assert.Equal(0, await h.UserManager.Users.CountAsync());
+        Assert.Equal(0, await h.UserManager.Users.CountAsync(TestContext.Current.CancellationToken));
         Assert.Empty(h.Sessions.Rows);
     }
 
@@ -823,7 +829,8 @@ public class AuthServiceTests
         var h = await CreateContext();
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-6", "alex.smith@example.com", ""));
+            new ExternalLoginRequest("Google", "sub-6", "alex.smith@example.com", ""),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.Equal("alexsmith", result.Value!.User.DisplayName);
@@ -834,7 +841,8 @@ public class AuthServiceTests
     {
         var h = await CreateContext();
         await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         var user = await h.UserManager.FindByLoginAsync("Google", "sub-7");
         await h.UserManager.SetLockoutEnabledAsync(user!, true);
@@ -842,7 +850,8 @@ public class AuthServiceTests
         var sessionsBefore = h.Sessions.Rows.Count;
 
         var result = await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-7", "alex@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(FailureReason.Locked, result.Reason);
@@ -854,7 +863,8 @@ public class AuthServiceTests
     {
         var h = await CreateContext();
         await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-8", "alex@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-8", "alex@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
         var sessionsBefore = h.Sessions.Rows.Count;
 
         var result = await h.Sut.LoginAsync(new LoginDto { Email = "alex@example.com", Password = "Pass123" });
@@ -869,7 +879,8 @@ public class AuthServiceTests
     {
         var h = await CreateContext();
         await h.Sut.ExternalLoginAsync(
-            new ExternalLoginRequest("Google", "sub-9", "alex@example.com", "Alex Smith"));
+            new ExternalLoginRequest("Google", "sub-9", "alex@example.com", "Alex Smith"),
+            ct: TestContext.Current.CancellationToken);
 
         var result = await h.Sut.RegisterAsync(new RegisterDto
         {
@@ -880,6 +891,6 @@ public class AuthServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("Email is already taken", result.ValidationErrors!["email"]);
-        Assert.Equal(1, await h.UserManager.Users.CountAsync());
+        Assert.Equal(1, await h.UserManager.Users.CountAsync(TestContext.Current.CancellationToken));
     }
 }
