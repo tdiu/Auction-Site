@@ -20,6 +20,8 @@ public class MailKitEmailSender(IOptions<EmailOptions> options) : IEmailSender
         msg.To.Add(MailboxAddress.Parse(toEmail));
         msg.Subject = subject;
         msg.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+        // Traceability, not dedup: Message-Id is a threading header, and a relay that sees the
+        // same id twice delivers twice.
         msg.MessageId = idempotencyKey;
 
         using var client = new SmtpClient();

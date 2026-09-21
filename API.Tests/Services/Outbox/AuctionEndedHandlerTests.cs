@@ -61,8 +61,8 @@ public class AuctionEndedHandlerTests
                 m.AuctionUrl == "https://client.test/auctions/42?pay=1"),
             Arg.Any<CancellationToken>());
 
-        // The idempotency key is the load-bearing assertion: it is the SMTP MessageId the mail layer
-        // dedupes on, and the same `auction-won-{id}` shape the dispatcher reads as delivery on a 23505.
+        // Deterministic key, though nothing acts on it yet: this handler writes no row, so the 23505
+        // rule cannot apply, and SMTP has no dedup. It matters once an idempotent provider is wired up.
         await _email.Received(1).SendAsync("w@x.io", "You won \"Strat\"", "<p>won</p>",
             "auction-won-42", Arg.Any<CancellationToken>());
     }

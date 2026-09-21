@@ -60,6 +60,8 @@ builder.Services.AddScoped<SessionSweepJob>();
 builder.Services.AddScoped<OutboxDispatcher>();
 builder.Services.AddScoped<IEmailTemplateRenderer, RazorEmailTemplateRenderer>();
 builder.Services.AddRazorTemplating();
+// Dev-only: the one implementation targets a local SMTP catcher. Other environments resolve no
+// IEmailSender, so every outbox handler fails to construct. Needs an else before deploying.
 if (builder.Environment.IsDevelopment())
     builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
