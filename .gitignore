@@ -493,9 +493,5 @@ API/auction.db*
 /gemini
 /API/gemini
 
-# Misc
-/TESTING.md
-/docs/*
-
-# Pending review before it goes in
-/README.md
+# Design notes and READMEs are part of the published repo; only the stale unused diagram is not.
+/docs/settlement flow.png

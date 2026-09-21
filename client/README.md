@@ -1,61 +1,36 @@
 # Client
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.3.
+Angular 21 SPA for [AuctionSite](../README.md). See the root README for first-run setup, including
+the local HTTPS certificate this dev server requires.
 
 ## Development server
 
-To start a local development server, run:
-
 ```bash
-ng serve
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
+The dev server runs over HTTPS at `https://localhost:4200/` and reloads on source changes. It
+expects the API on `https://localhost:5001` (`src/environments/environment.ts`).
 
 ## Building
 
-To build the project run:
-
 ```bash
-ng build
+npm run build -- --configuration production
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Build artifacts land in `dist/`. This is what CI runs.
 
 ## Running unit tests
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Unit tests run on [Vitest](https://vitest.dev/):
 
 ```bash
-ng test
+npm test -- --watch=false
 ```
 
+There are no end-to-end tests; the manual walkthroughs in [../TESTING.md](../TESTING.md) and
+[../docs/winner-email-testing.md](../docs/winner-email-testing.md) cover the cross-system paths
+instead.
 
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Generated with [Angular CLI](https://github.com/angular/angular-cli) 21.1.3; see the
+[CLI command reference](https://angular.dev/tools/cli) for the rest of its commands.
