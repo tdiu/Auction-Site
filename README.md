@@ -179,13 +179,13 @@ The app is at https://localhost:4200.
 ## Tests
 
 ```bash
-dotnet test                                              # 205 backend tests, Docker required
-dotnet test --filter "Category!=Integration"             # 191 of them, no Docker
-cd client && npm test -- --watch=false                   # 38 client tests
+dotnet test                                              # everything, Docker required
+dotnet test --filter "Category!=Integration"             # skips the Postgres suite, no Docker
+cd client && npm test -- --watch=false                   # client
 ```
 
-The 14 integration tests run against real PostgreSQL in a throwaway Testcontainers instance rather
-than an in-memory provider, because none of what they assert is observable without real row
+The integration suite runs against real PostgreSQL in a throwaway Testcontainers instance rather
+than an in-memory provider, because none of what it asserts is observable without real row
 semantics:
 
 * `RefreshSessionConcurrencyTests` drives two real connections at a single refresh token and
