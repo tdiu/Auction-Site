@@ -8,12 +8,10 @@ note and the code disagree, the code is right and the note is the bug.
 
 | Doc | What it covers |
 |---|---|
-| [concurrency.md](concurrency.md) | The races in the bid and payment paths, and the database-layer mechanism guarding each. Start here. |
+| [concurrency.md](concurrency.md) | The races in the bid, payment and signup paths, and the database-layer mechanism guarding each. Start here. |
 | [payment-outbox-explained.md](payment-outbox-explained.md) | The transactional outbox from the ground up: producer, handler, dispatcher, and the two ideas that trip people up (DI scope per message, co-commit). |
 | [claim-and-lease.md](claim-and-lease.md) | How the dispatcher hands work to competing workers without delivering twice, and what a lease trades away versus a lock. |
 | [winner-email.md](winner-email.md) | The two transactional emails and the provider-agnostic layer behind them: seam, Razor templates, and the limits of idempotency over SMTP. |
-| [federated-login.md](federated-login.md) | Google sign-in: why the server-side flow, the redirect that never puts a token in a URL, and the one-account-per-email rule. |
-| [federated-login-appendix-displayname.md](federated-login-appendix-displayname.md) | Generating a unique `DisplayName` on the OAuth path and surviving the race that creates. |
 
 ## Decision records
 

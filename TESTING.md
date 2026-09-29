@@ -108,4 +108,4 @@ OpenAPI endpoint exposed: `AddOpenApi()` is registered but never mapped.) You ne
   the attempt failed either: it sits `Pending` until the session expires. Latent while the Stripe
   account offers cards only; real the moment an async payment method is enabled.
 - **A `checkout.session.completed` that Stripe never delivers is not reconciled**; see
-  [docs/concurrency.md](docs/concurrency.md) §5.
+  [docs/concurrency.md](docs/concurrency.md) §6.

@@ -61,7 +61,7 @@ published. Kafka only ever sees successes, which makes it exactly the wrong plac
 for unexpected failures. Rejected bids genuinely have no audit trail today, and that is a
 limitation of the bid path rather than of the transport: closing it means writing rejections from
 inside `PlaceBid`, which is equally available with or without a broker. Kafka was never going to
-close it. (Also recorded in [concurrency.md](concurrency.md) §5.)
+close it. (Also recorded in [concurrency.md](concurrency.md) §6.)
 
 ### What is *not* an argument here
 
@@ -135,18 +135,6 @@ partition key.
 Both tools enforce single-writer. Kafka does it by making the write async; Orleans does it
 while keeping the call synchronous, which is why Orleans is at least *shaped* like the bid
 path in a way Kafka isn't.
-
----
-
-## 5. Does eBay use Kafka for bids?
-
-Partially answerable. eBay's **Rheos** is a documented Kafka-based streaming platform
-handling ~100B messages/day. That's real, and it's for streaming and insights.
-
-Whether Kafka sits in eBay's **bid write path** is *not* verifiable. The articles that
-claim to describe it are interview-prep hypotheticals, not engineering-blog sources. It's
-also deducible from the UX that it doesn't: eBay tells you immediately whether you're the
-high bidder, and nobody decides that in a consumer.
 
 ---
 

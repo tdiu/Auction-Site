@@ -15,14 +15,12 @@ succeeds while the email announcing it fails.
 One per problem, written while building, indexed in [`docs/`](docs/README.md). They document code
 that is on `main`; where one argues against something instead, it says so in its opening line.
 
-* [Concurrency](docs/concurrency.md), the bidding and payment races and the tests that hold
-  them down. The best one to read first.
+* [Concurrency](docs/concurrency.md), the bidding, payment and signup races and the tests that
+  hold them down. The best one to read first.
 * [The payment outbox](docs/payment-outbox-explained.md), why charging and notifying cannot
   share a transaction, and what does instead.
 * [Settlement: claim and lease](docs/claim-and-lease.md), how an expiring auction gets settled
   once when several workers race for it.
-* [Federated login](docs/federated-login.md), Google sign-in, one account per email, and
-  generating a username that survives a uniqueness race.
 * [Kafka](docs/kafka.md), a design that was proposed, evaluated, and turned down.
 
 ## What is built

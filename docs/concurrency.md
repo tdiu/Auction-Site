@@ -1,6 +1,6 @@
 # Concurrency handling
 
-**Scope:** the races in the bid and payment paths, and the mechanism guarding each
+**Scope:** the races in the bid, payment and signup paths, and the mechanism guarding each
 **Companion docs:** [claim-and-lease.md](claim-and-lease.md) for the outbox dispatcher's own concurrency contract
 
 ## Overview
@@ -95,7 +95,32 @@ call. It deliberately does not deduplicate two *separate* requests: the partial 
 
 ---
 
-## 5. Known limitations
+## 5. Concurrent signups: the validator is not a lock
+
+**Mechanism:** unique indexes on the name and email columns, with a savepoint-per-attempt retry loop
+in `AuthService.CreateExternalUserAsync`.
+
+Google sign-in generates a `DisplayName`, so two signups can derive the same one at once.
+`UserValidator` checks for duplicates before inserting, but that check is a `SELECT`, not a lock:
+both callers pass it and the loser hits the unique index. A collision therefore arrives as either
+`DuplicateUserName` (serial) or a raw 23505 (the race), and both retry with a randomly suffixed name.
+
+Three details make the retry work:
+
+- **Mutate one entity.** A failed insert stays in the change tracker as `Added`, so a fresh
+  `AppUser` per attempt would re-insert the failed one forever. (§2 hits the same trap and
+  detaches instead.)
+- **Savepoint per attempt.** The account and its provider link share a transaction, and on
+  Postgres a unique violation aborts it: without a savepoint, every retry fails with 25P02.
+- **Filter order.** `IsNameCollision` (retry) must precede `IsUniqueViolation`, which also matches
+  `EmailIndex` (refuse, one account per email) and would otherwise swallow name collisions.
+
+None of these branches run serially, since the validator absorbs every collision first. Only
+`ExternalLoginConcurrencyTests` against real Postgres reaches them.
+
+---
+
+## 6. Known limitations
 
 - **DB is the source of truth for races**, not in-memory locking. This is the right call
   for a horizontally-scalable API where multiple instances share one Postgres: in-process
@@ -149,3 +174,5 @@ call. It deliberately does not deduplicate two *separate* requests: the partial 
 | Two open sessions for one payment | Partial unique index on `Pending` attempts, reuse the winner's | `PaymentServiceTests.CreateCheckoutSession_WithOpenSession_...` |
 | Redelivered completion webhook | Partial unique index on `Completed` attempts + idempotent `MarkPaid` | `PaymentConcurrencyTests.Webhook_SecondCompletedAttempt_...`, `PaymentWebhookTests` |
 | Transport-level retry of a Stripe create | Per-call idempotency key | `PaymentServiceTests.CreateCheckoutSession_WhenWinner_...` |
+| Two signups deriving one name | Unique name indexes, savepoint-per-attempt retry | `ExternalLoginConcurrencyTests.Concurrent_signups_deriving_one_name_...` |
+| Two signups for one email | Unique `EmailIndex`, refused rather than retried | `ExternalLoginConcurrencyTests.Concurrent_signups_for_one_email_...` |
